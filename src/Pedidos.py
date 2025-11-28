@@ -1,0 +1,2 @@
+class Pedidos:
+    pass
