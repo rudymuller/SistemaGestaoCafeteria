@@ -51,8 +51,9 @@ class App:
 				messagebox.showinfo("Login", "Login cancelado.")
 			else:
 				username, password = creds
-				# We don't create users yet; just show what was entered as a placeholder
-				messagebox.showinfo("Login", f"Usuário: {username}\nSenha: {'*' * len(password)}")
+				# Decide menu based on the Login instance's userType attribute
+				# (Login.userType: True = admin, False = atend, None = unknown)
+				self.showMenutype(login_screen)
 			
 
 		enter_btn = tk.Button(btn_frame, text="Entrar", width=12, command=on_enter)
@@ -72,4 +73,41 @@ class App:
 
 		if owns_root:
 			root.mainloop()
+
+	def showMenutype(self, login_instance):
+		"""Open an admin or atendimento screen based on login_instance.userType.
+
+		- If login_instance.userType is True -> show Administrative menu screen
+		- If False -> show Atendimento menu screen
+		- If None -> show a message informing that the user type was not identified
+		"""
+		ut = getattr(login_instance, 'userType', None)
+		if ut is True:
+			# Admin menu
+			win = tk.Toplevel() if login_instance.parent else tk.Tk()
+			win.title("Menu Administrativo")
+			win.geometry("420x220")
+			frm = tk.Frame(win, padx=16, pady=16)
+			frm.pack(expand=True, fill=tk.BOTH)
+			label = tk.Label(frm, text="Menu Administrativo", font=("Segoe UI", 14, "bold"))
+			label.pack(pady=(4, 12))
+			msg = tk.Label(frm, text="Aqui você encontrará opções administrativas (placeholder).",
+					wraplength=380, justify=tk.CENTER)
+			msg.pack(pady=6)
+			win.resizable(False, False)
+		elif ut is False:
+			# Atendimento menu
+			win = tk.Toplevel() if login_instance.parent else tk.Tk()
+			win.title("Menu de Atendimento")
+			win.geometry("420x220")
+			frm = tk.Frame(win, padx=16, pady=16)
+			frm.pack(expand=True, fill=tk.BOTH)
+			label = tk.Label(frm, text="Menu de Atendimento", font=("Segoe UI", 14, "bold"))
+			label.pack(pady=(4, 12))
+			msg = tk.Label(frm, text="Aqui você encontrará opções de atendimento (placeholder).",
+					wraplength=380, justify=tk.CENTER)
+			msg.pack(pady=6)
+			win.resizable(False, False)
+		else:
+			messagebox.showwarning("Tipo de usuário", "Tipo de usuário não identificado (userType=None).\nVerifique as credenciais ou cadastre o usuário.")
     

@@ -14,6 +14,8 @@ class Login:
       self.parent = parent
       self.username = None
       self.password = None
+      # userType: True for admin, False for atend, None for not-set/other users
+      self.userType = None
 
    def _center(self, win, w=380, h=200):
       win.update_idletasks()
@@ -53,10 +55,13 @@ class Login:
 
       result = {'value': None}
 
-      def submit():
+      def submit(event=None):
+         # event is optional so this can be called from the Enter key binding
          u = user_entry.get().strip()
          p = pass_entry.get()
-         # Accept empty values (no user creation/verification yet) but still return them
+         # Set userType when using built-in accounts (admin/admin, atend/atend)
+         self.userCheck(u, p)
+         # Accept values and return them
          self.username = u
          self.password = p
          result['value'] = (u, p)
@@ -78,6 +83,10 @@ class Login:
       # Focus
       user_entry.focus_set()
 
+      # allow pressing Enter (Return / keypad Enter) to submit the dialog
+      root.bind('<Return>', submit)
+      root.bind('<KP_Enter>', submit)
+
       if owns_root:
          root.mainloop()
       else:
@@ -85,3 +94,19 @@ class Login:
          root.wait_window()
 
       return result['value']
+
+   def userCheck(self, nome_usuario: str, senha: str) -> bool:
+      """Check for the two built-in credentials and set `self.userType`.
+
+      - admin/admin -> set self.userType = True and return True
+      - atend/atend -> set self.userType = False and return True
+      - otherwise -> return False (self.userType is left as None)
+      """
+      if nome_usuario == 'admin' and senha == 'admin':
+         self.userType = True
+         return True
+      if nome_usuario == 'atend' and senha == 'atend':
+         self.userType = False
+         return True
+      # leave userType unchanged for other credentials
+      return False
