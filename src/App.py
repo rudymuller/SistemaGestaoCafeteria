@@ -1,9 +1,10 @@
 import tkinter as tk
 from tkinter import messagebox
+from const import WIN_WIDTH, WIN_HEIGHT
 
 
 class App:
-	def telaInicial(self, root=None):
+	def homeScreen(self, root=None):
 		"""Create a simple desktop home screen (Tkinter) with a welcome message.
 
 		If `root` is provided, a Toplevel window will be used so this method
@@ -17,7 +18,7 @@ class App:
 
 		# Configure window
 		root.title("Sistema de Gestão da Cafeteria")
-		width, height = 600, 320
+		width, height = WIN_HEIGHT, WIN_WIDTH
 		screen_w = root.winfo_screenwidth()
 		screen_h = root.winfo_screenheight()
 		x = (screen_w - width) // 2

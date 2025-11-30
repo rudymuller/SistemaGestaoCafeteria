@@ -1,0 +1,4 @@
+# W
+WIN_HEIGHT = 900
+WIN_WIDTH = 520
+

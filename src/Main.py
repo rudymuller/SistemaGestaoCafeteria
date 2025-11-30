@@ -3,7 +3,7 @@ from App import App
 
 def main():
 	app = App()
-	app.telaInicial()
+	app.homeScreen()
 
 
 if __name__ == '__main__':
