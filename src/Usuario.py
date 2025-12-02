@@ -10,11 +10,11 @@ class Usuario:
     """User manager backed by SysDB (managed via DBProxy).
 
     This class will create and manage a `usuarios` table inside the SysDB
-    SQLite database (default file: SysDB.db). It exposes methods to add,
+    SQLite database (default file: data/SysDB.db). It exposes methods to add,
     update and logically remove users (adicionar, atualizar, remover).
     """
 
-    def __init__(self, db_path: str = "SysDB.db"):
+    def __init__(self, db_path: str = "data/SysDB.db"):
         self.db = DBProxy(db_path)
         self._ensure_table()
 

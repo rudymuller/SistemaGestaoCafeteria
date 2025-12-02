@@ -278,7 +278,11 @@ class App:
 						adjust_columns()
 
 					def adjust_columns():
-						f = tkfont.Font(tree, tree.cget('font'))
+						# Treeview doesn't expose a direct 'font' option; use default font
+						try:
+							f = tkfont.nametofont(tree.cget('font'))
+						except Exception:
+							f = tkfont.nametofont('TkDefaultFont')
 						padding = 18
 						for c in cols:
 							# header

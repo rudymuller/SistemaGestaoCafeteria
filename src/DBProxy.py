@@ -8,13 +8,13 @@ class DBProxy:
     """Simple SQLite database proxy for SysDB.
 
     Usage:
-        db = DBProxy()  # uses SysDB.db in the repo by default
+        db = DBProxy()  # uses data/SysDB.db in the repo by default
         db.execute("CREATE TABLE IF NOT EXISTS ...")
 
     The class provides helpers to run queries and a context-manager interface.
     """
 
-    def __init__(self, db_path: str = "SysDB.db", *, enable_foreign_keys: bool = True):
+    def __init__(self, db_path: str = "data/SysDB.db", *, enable_foreign_keys: bool = True):
         self.db_path = db_path
         self.conn: Optional[sqlite3.Connection] = None
         self.enable_foreign_keys = enable_foreign_keys
@@ -24,6 +24,20 @@ class DBProxy:
         """Open a connection to the SQLite database (if not already opened)."""
         if self.conn:
             return
+        # ensure parent directory exists and move old root DB if needed
+        import os, shutil
+        parent = os.path.dirname(self.db_path)
+        if parent and not os.path.exists(parent):
+            os.makedirs(parent, exist_ok=True)
+
+        # if an old SysDB.db is at repo root, move it into data/
+        try:
+            root_db = os.path.join(os.getcwd(), 'SysDB.db')
+            if os.path.exists(root_db) and os.path.abspath(root_db) != os.path.abspath(self.db_path):
+                shutil.move(root_db, self.db_path)
+        except Exception:
+            pass
+
         # allow multi-threaded usage if required; keep default check_same_thread=True
         self.conn = sqlite3.connect(self.db_path)
         # return rows as sqlite3.Row for convenience
@@ -114,8 +128,8 @@ class DBProxy:
 
 
 """if __name__ == '__main__':
-    # quick demo: create a tiny config table and insert a row
-    db = DBProxy('SysDB_demo.db')
+    # quick demo: create a tiny config table and insert a row (in data/ by default)
+    db = DBProxy('data/SysDB_demo.db')
     db.execute('CREATE TABLE IF NOT EXISTS demo (id INTEGER PRIMARY KEY, name TEXT)', commit=True)
     db.execute('INSERT INTO demo (name) VALUES (?)', ('example',), commit=True)
     rows = db.query_all('SELECT * FROM demo')
