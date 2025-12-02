@@ -1,9 +1,22 @@
-import hashlib
-import os
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 
 from DBProxy import DBProxy
+from AuthUtils import hash_password, verify_password
+
+
+@dataclass
+class User:
+    id: int | None = None
+    nome: str | None = None
+    sobrenome: str | None = None
+    cpf: str | None = None
+    nome_usuario: str | None = None
+    senha: str | None = None
+    data_admissao: str | None = None
+    tipo_acesso: str | None = None
+    ativo: int = 1
 
 
 class Usuario:
@@ -36,28 +49,16 @@ class Usuario:
         """
         self.db.execute(sql, commit=True)
 
-    # --- password helpers ---
-    def _hash_password(self, password: str, salt: Optional[bytes] = None) -> str:
-        if salt is None:
-            salt = os.urandom(16)
-        key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100_000)
-        return salt.hex() + ':' + key.hex()
-
-    def _verify_password(self, password: str, stored: str) -> bool:
-        try:
-            salt_hex, key_hex = stored.split(':')
-            salt = bytes.fromhex(salt_hex)
-            expected = bytes.fromhex(key_hex)
-            got = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100_000)
-            return hashlib.compare_digest(got, expected)
-        except Exception:
-            return False
+    # Password handling is delegated to auth_utils.hash_password / verify_password
 
     # --- public API ---
     def adicionar(self, nome: str, sobrenome: str, cpf: str, nome_usuario: str, senha: str,
                  data_admissao: Optional[str] = None, tipo_acesso: Optional[str] = None) -> int:
         """Add a new user, return the new id. Raises sqlite3.IntegrityError on duplicates."""
-        hashed = self._hash_password(senha)
+        # Basic validation
+        if not nome or not nome_usuario or not senha:
+            raise ValueError('nome, nome_usuario and senha are required')
+        hashed = hash_password(senha)
         now = datetime.utcnow().isoformat()
         cur = self.db.execute(
             """
@@ -83,7 +84,7 @@ class Usuario:
             if k not in allowed:
                 continue
             if k == 'senha':
-                v = self._hash_password(v)
+                v = hash_password(v)
             set_parts.append(f"{k} = ?")
             params.append(v)
 
@@ -110,6 +111,16 @@ class Usuario:
     # helpers
     def obter(self, user_id: int) -> Optional[Dict[str, Any]]:
         row = self.db.query_one("SELECT * FROM usuarios WHERE id = ?", (user_id,))
+        return dict(row) if row else None
+
+    def obter_por_nome_usuario(self, nome_usuario: str) -> Optional[Dict[str, Any]]:
+        """Lookup a user row by the `nome_usuario` string.
+
+        Returns a dict or None when not found.
+        """
+        if not nome_usuario:
+            return None
+        row = self.db.query_one("SELECT * FROM usuarios WHERE nome_usuario = ?", (nome_usuario,))
         return dict(row) if row else None
 
     def listar(self, include_inativos: bool = False) -> List[Dict[str, Any]]:

@@ -2,6 +2,9 @@ import tkinter as tk
 from tkinter import ttk
 
 
+from typing import Optional, Callable
+
+
 class Login:
    """Small modal login dialog.
 
@@ -10,12 +13,15 @@ class Login:
       creds = login.show()  # returns (username, password) or None if cancelled
    """
 
-   def __init__(self, parent=None):
+   def __init__(self, parent=None, auth_handler: Optional[Callable[[str, str], object]] = None):
       self.parent = parent
       self.username = None
       self.password = None
       # userType: True for admin, False for atend, None for not-set/other users
       self.userType = None
+      # auth_handler: callable(username, password) -> AuthResult-like object
+      # If not provided, Login will only use its minimal builtin checks
+      self.auth_handler = auth_handler
 
    def _center(self, win, w=380, h=200):
       win.update_idletasks()
@@ -59,8 +65,28 @@ class Login:
          # event is optional so this can be called from the Enter key binding
          u = user_entry.get().strip()
          p = pass_entry.get()
-         # Set userType when using built-in accounts (admin/admin, atend/atend)
-         self.userCheck(u, p)
+         # Attempt to authenticate using provided handler (AuthService) if available
+         if self.auth_handler is not None:
+            try:
+               res = self.auth_handler(u, p)
+               # Res may be an AuthResult-like object with access_type attribute
+               if getattr(res, 'ok', False):
+                  at = getattr(res, 'access_type', None)
+                  if at == 'admin':
+                     self.userType = True
+                  elif at == 'atend':
+                     self.userType = False
+                  else:
+                     self.userType = None
+               else:
+                  # if handler failed to authenticate, fallback to builtin check
+                  self.userCheck(u, p)
+            except Exception:
+               # any errors from handler should not break UI - fallback to builtin
+               self.userCheck(u, p)
+         else:
+            # No handler provided -> use builtin check only
+            self.userCheck(u, p)
          # Accept values and return them
          self.username = u
          self.password = p
