@@ -100,13 +100,13 @@ class App:
 		- If None -> show a message informing that the user type was not identified
 		"""
 		ut = getattr(login_instance, 'userType', None)
-		# Dispatch to helper methods
+		from MenuAdmin import MenuAdmin
+		from MenuFunc import MenuFunc
+
 		if ut is True:
-			win, frm = self._new_menu_window(login_instance, title="Menu Administrativo")
-			self._render_admin_menu(frm, win)
+			MenuAdmin(self, login_instance)
 		elif ut is False:
-			win, frm = self._new_menu_window(login_instance, title="Menu de Atendimento")
-			self._render_atendimento_menu(frm, win)
+			MenuFunc(self, login_instance)
 		else:
 			messagebox.showwarning("Tipo de usuário", "Tipo de usuário não identificado (userType=None).\nVerifique as credenciais ou cadastre o usuário.")
 
@@ -163,7 +163,7 @@ class App:
 		self._maximize_window(win)
 
 
-	def _render_controle_menu(self, frm, win):
+	def _render_controle_menu(self, frm, win, back_callback=None):
 		# replace frame contents with controle submenu
 		for w in list(frm.winfo_children()):
 			w.destroy()
@@ -193,7 +193,12 @@ class App:
 		# Back button
 		back_frm = tk.Frame(frm)
 		back_frm.pack(pady=(10, 0))
-		back_btn = tk.Button(back_frm, text="Voltar", width=12, command=lambda: self._render_admin_menu(frm, win))
+		back_btn = tk.Button(
+			back_frm,
+			text="Voltar",
+			width=12,
+			command=back_callback or (lambda: self._render_admin_menu(frm, win)),
+		)
 		back_btn.pack()
 
 
