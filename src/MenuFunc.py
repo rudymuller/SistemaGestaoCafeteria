@@ -12,6 +12,9 @@ class MenuFunc:
         self.render()
 
     def render(self):
+        for widget in self.frame.winfo_children():
+            widget.destroy()
+
         tk.Label(
             self.frame,
             text="Menu de Atendimento",
@@ -40,6 +43,7 @@ class MenuFunc:
         ).pack(pady=6)
 
         self.app._maximize_window(self.win)
+        self.app._add_navigation_buttons(self.frame, self.win, self.render)
 
     def open_placeholder(self, title):
         messagebox.showinfo(title, f"Abrindo {title} (placeholder)")

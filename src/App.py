@@ -135,6 +135,17 @@ class App:
 			except Exception:
 				win.attributes('-fullscreen', True)
 
+	def _add_navigation_buttons(self, parent, win, main_callback):
+		"""Add contextual main-menu and application-exit buttons to a screen."""
+		navigation = tk.Frame(parent)
+		navigation.pack(side=tk.BOTTOM, fill=tk.X, pady=(12, 0))
+		tk.Button(navigation, text='Menu Principal', command=main_callback).pack(side=tk.LEFT, padx=6)
+		tk.Button(navigation, text='Sair', command=lambda: self._confirm_exit(win)).pack(side=tk.RIGHT, padx=6)
+
+	def _confirm_exit(self, win):
+		if messagebox.askyesno('Sair', 'Deseja realmente sair da aplicação?'):
+			win._root().destroy()
+
 
 	def _render_admin_menu(self, frm, win):
 		"""Render the administrative menu inside the supplied frame."""
@@ -161,6 +172,7 @@ class App:
 
 		# maximize window
 		self._maximize_window(win)
+		self._add_navigation_buttons(frm, win, lambda: self._render_admin_menu(frm, win))
 
 
 	def _render_controle_menu(self, frm, win, back_callback=None):
@@ -177,7 +189,7 @@ class App:
 		opts = tk.Frame(frm)
 		opts.pack(pady=4)
 
-		usr_btn = tk.Button(opts, text="Usuários", width=20, command=lambda: self._render_user_management(frm, win))
+		usr_btn = tk.Button(opts, text="Usuários", width=20, command=lambda: self._render_user_management(frm, win, back_callback))
 		est_btn = tk.Button(opts, text="Estoque", width=20, command=lambda: self._open_placeholder('Estoque'))
 		gas_btn = tk.Button(opts, text="Gastos", width=20, command=lambda: self._open_placeholder('Gastos'))
 		fat_btn = tk.Button(opts, text="Faturamento", width=20, command=lambda: self._open_placeholder('Faturamento'))
@@ -200,13 +212,14 @@ class App:
 			command=back_callback or (lambda: self._render_admin_menu(frm, win)),
 		)
 		back_btn.pack()
+		self._add_navigation_buttons(frm, win, back_callback or (lambda: self._render_admin_menu(frm, win)))
 
 
 	def _open_placeholder(self, title: str):
 		messagebox.showinfo(title, f"Abrindo {title} (placeholder)")
 
 
-	def _render_user_management(self, frm, win):
+	def _render_user_management(self, frm, win, main_callback=None):
 		"""Render the user management UI inside the given frame.
 
 		This method contains the same functionality as the previous inline
@@ -274,11 +287,15 @@ class App:
 			btns.grid(row=len(labels), column=0, columnspan=2, pady=(12,0))
 			tk.Button(btns, text='Salvar', command=submit_add).pack(side=tk.LEFT, padx=6)
 			tk.Button(btns, text='Cancelar', command=add_win.destroy).pack(side=tk.LEFT, padx=6)
+			nav_add = tk.Frame(frm_add)
+			nav_add.grid(row=len(labels) + 1, column=0, columnspan=2, pady=(8, 0))
+			tk.Button(nav_add, text='Menu Principal', command=lambda: self._close_and_return(add_win, main_callback)).pack(side=tk.LEFT, padx=6)
+			tk.Button(nav_add, text='Sair', command=lambda: self._confirm_exit(add_win)).pack(side=tk.LEFT, padx=6)
 
 		add_btn = tk.Button(ctrl_top, text='Adicionar', width=12, command=on_add)
 		add_btn.pack(side=tk.LEFT)
 
-		back_btn = tk.Button(ctrl_top, text='Voltar', width=12, command=lambda: self._render_controle_menu(frm, win))
+		back_btn = tk.Button(ctrl_top, text='Voltar', width=12, command=lambda: self._render_controle_menu(frm, win, main_callback))
 		back_btn.pack(side=tk.RIGHT)
 
 		# Treeview list for users
@@ -436,12 +453,22 @@ class App:
 			bfr.grid(row=len(labels) + 1, column=0, columnspan=2, pady=(12,0))
 			tk.Button(bfr, text='Salvar', command=submit_update).pack(side=tk.LEFT, padx=6)
 			tk.Button(bfr, text='Cancelar', command=upd_win.destroy).pack(side=tk.LEFT, padx=6)
+			nav_update = tk.Frame(fup)
+			nav_update.grid(row=len(labels) + 2, column=0, columnspan=2, pady=(8, 0))
+			tk.Button(nav_update, text='Menu Principal', command=lambda: self._close_and_return(upd_win, main_callback)).pack(side=tk.LEFT, padx=6)
+			tk.Button(nav_update, text='Sair', command=lambda: self._confirm_exit(upd_win)).pack(side=tk.LEFT, padx=6)
 
 		btn_update = tk.Button(action_frame, text='Atualizar', width=16, command=do_update)
 		btn_remove = tk.Button(action_frame, text='Remover', width=16, command=do_remove)
 
 		refresh_list()
+		self._add_navigation_buttons(frm, win, main_callback or (lambda: self._render_controle_menu(frm, win)))
 		# done rendering the users screen
+
+	def _close_and_return(self, win, callback):
+		win.destroy()
+		if callback:
+			callback()
 
 	def _adjust_columns(self, tree: ttk.Treeview, cols: tuple):
 		"""Adjust Treeview column widths based on header and cell content."""

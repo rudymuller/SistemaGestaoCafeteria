@@ -43,6 +43,7 @@ class MenuAdmin:
         ).grid(row=0, column=1, padx=8, pady=6)
 
         self.app._maximize_window(self.win)
+        self.app._add_navigation_buttons(self.frame, self.win, self.render)
 
     def open_pedidos(self):
         try:
