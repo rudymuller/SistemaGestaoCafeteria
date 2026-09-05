@@ -4,6 +4,63 @@ from const import WIN_WIDTH, WIN_HEIGHT
 
 
 class App:
+	COLORS = {
+		"ink": "#193B52",
+		"muted": "#567286",
+		"canvas": "#EEF4F7",
+		"surface": "#FFFFFF",
+		"line": "#D2E0E8",
+		"primary": "#356B85",
+		"primary_dark": "#244E66",
+		"success": "#477B93",
+		"warning": "#638BA0",
+		"danger": "#294F65",
+	}
+	ICONS = {
+		"Entrar": "➜",
+		"Sair": "×",
+		"Menu Principal": "⌂",
+		"Sair da conta": "⇥",
+		"Voltar": "‹",
+		"Pedidos": "▣",
+		"Controle": "⚙",
+		"Usuários": "♙",
+		"Estoque": "▤",
+		"Gastos": "¤",
+		"Faturamento": "▥",
+		"Gestão": "◆",
+		"Adicionar": "+",
+		"Editar": "✎",
+		"Excluir": "−",
+		"Nova compra": "＋",
+		"Agrupar semelhantes": "≡",
+	}
+
+	def _style_button(self, button, tone="primary"):
+		colors = self.COLORS
+		label = button.cget("text")
+		icon = self.ICONS.get(label)
+		if icon:
+			button.configure(text=f"{icon}\n{label}")
+		button.configure(
+			font=("Segoe UI Symbol", 10, "bold"),
+			bg=colors["primary"],
+			fg="white",
+			activebackground=colors["primary_dark"],
+			activeforeground="white",
+			 relief=tk.FLAT,
+			borderwidth=0,
+			padx=12,
+			pady=5,
+			cursor="hand2",
+		)
+
+	def _style_heading(self, label):
+		label.configure(fg=self.COLORS["ink"], bg=self.COLORS["canvas"])
+
+	def _style_subtitle(self, label):
+		label.configure(fg=self.COLORS["muted"], bg=self.COLORS["canvas"])
+
 	def homeScreen(self, root=None):
 		"""Create a simple desktop home screen (Tkinter) with a welcome message.
 
@@ -26,16 +83,19 @@ class App:
 		root.geometry(f"{width}x{height}+{x}+{y}")
 
 		# Root frame
-		frame = tk.Frame(root, padx=20, pady=20)
+		root.configure(bg=self.COLORS["canvas"])
+		frame = tk.Frame(root, padx=28, pady=28, bg=self.COLORS["canvas"])
 		frame.pack(expand=True, fill=tk.BOTH)
 
 		# Welcome message
-		title = tk.Label(frame, text="Bem-vindo ao Sistema de Gestão da Cafeteria",
-						 font=("Segoe UI", 18, "bold"), wraplength=520, justify=tk.CENTER)
+		title = tk.Label(frame, text="Gestão da Cafeteria",
+						 font=("Segoe UI", 22, "bold"), wraplength=520, justify=tk.CENTER,
+						 bg=self.COLORS["canvas"], fg=self.COLORS["ink"])
 		title.pack(pady=(10, 18))
 
-		subtitle = tk.Label(frame, text="Organize pedidos, estoque e gastos com simplicidade.",
-							font=("Segoe UI", 12), fg="#333333")
+		subtitle = tk.Label(frame, text="Pedidos, estoque e controle em um só lugar.",
+						font=("Segoe UI", 12), bg=self.COLORS["canvas"])
+		self._style_subtitle(subtitle)
 		subtitle.pack(pady=(0, 18))
 
 		# Buttons
@@ -75,6 +135,7 @@ class App:
 			
 
 		enter_btn = tk.Button(btn_frame, text="Entrar", width=12, command=on_enter)
+		self._style_button(enter_btn, "primary")
 		enter_btn.grid(row=0, column=0, padx=8)
 
 		def on_exit():
@@ -84,6 +145,7 @@ class App:
 				root.withdraw()
 
 		exit_btn = tk.Button(btn_frame, text="Sair", width=12, command=on_exit)
+		self._style_button(exit_btn, "danger")
 		exit_btn.grid(row=0, column=1, padx=8)
 
 		# Make the window non-resizable for a cleaner welcome screen
@@ -119,8 +181,9 @@ class App:
 		"""
 		win = tk.Toplevel() if login_instance.parent else tk.Tk()
 		win.title(title)
-		win.geometry("420x220")
-		frm = tk.Frame(win, padx=16, pady=16)
+		win.geometry("760x560")
+		win.configure(bg=self.COLORS["canvas"])
+		frm = tk.Frame(win, padx=24, pady=22, bg=self.COLORS["canvas"])
 		frm.pack(expand=True, fill=tk.BOTH)
 		return win, frm
 
@@ -139,10 +202,16 @@ class App:
 		"""Add contextual main-menu and application-exit buttons to a screen."""
 		navigation = tk.Frame(parent)
 		navigation.pack(side=tk.BOTTOM, fill=tk.X, pady=(12, 0))
-		tk.Button(navigation, text='Menu Principal', command=main_callback).pack(side=tk.LEFT, padx=6)
-		tk.Button(navigation, text='Sair', command=lambda: self._confirm_exit(win)).pack(side=tk.RIGHT, padx=6)
+		main_button = tk.Button(navigation, text='Menu Principal', command=main_callback)
+		self._style_button(main_button, "primary")
+		main_button.pack(side=tk.LEFT, padx=6)
+		exit_button = tk.Button(navigation, text='Sair', command=lambda: self._confirm_exit(win))
+		self._style_button(exit_button, "danger")
+		exit_button.pack(side=tk.RIGHT, padx=6)
 		if logout_callback:
-			tk.Button(navigation, text='Sair da conta', command=logout_callback).pack(side=tk.RIGHT, padx=6)
+			logout_button = tk.Button(navigation, text='Sair da conta', command=logout_callback)
+			self._style_button(logout_button, "warning")
+			logout_button.pack(side=tk.RIGHT, padx=6)
 
 	def _logout(self, win):
 		"""Close the current menu and return to the login flow."""
@@ -174,6 +243,8 @@ class App:
 		menu_frame.pack(pady=(8, 6))
 		ped_btn = tk.Button(menu_frame, text="Pedidos", width=40, command=open_pedidos)
 		ctr_btn = tk.Button(menu_frame, text="Controle", width=40, command=lambda: self._render_controle_menu(frm, win))
+		self._style_button(ped_btn)
+		self._style_button(ctr_btn)
 		ped_btn.grid(row=0, column=0, padx=8, pady=6)
 		ctr_btn.grid(row=0, column=1, padx=8, pady=6)
 
@@ -188,12 +259,14 @@ class App:
 			w.destroy()
 
 		heading = tk.Label(frm, text="Controle — Opções", font=("Segoe UI", 14, "bold"))
+		self._style_heading(heading)
 		heading.pack(pady=(4, 12))
 
 		info = tk.Label(frm, text="Gerencie usuários, estoque, gastos e faturamento:", wraplength=520, justify=tk.CENTER)
+		self._style_subtitle(info)
 		info.pack(pady=(0, 10))
 
-		opts = tk.Frame(frm)
+		opts = tk.Frame(frm, bg=self.COLORS["canvas"])
 		opts.pack(pady=4)
 
 		usr_btn = tk.Button(opts, text="Usuários", width=20, command=lambda: self._render_user_management(frm, win, back_callback))
@@ -206,6 +279,11 @@ class App:
 		gas_btn = tk.Button(opts, text="Gastos", width=20, command=lambda: self._open_placeholder('Gastos'))
 		fat_btn = tk.Button(opts, text="Faturamento", width=20, command=lambda: self._open_placeholder('Faturamento'))
 		ges_btn = tk.Button(opts, text="Gestão", width=20, command=lambda: self._open_placeholder('Gestão'))
+		for button, tone in (
+			(usr_btn, "primary"), (est_btn, "success"), (gas_btn, "warning"),
+			(fat_btn, "primary"), (ges_btn, "success"),
+		):
+			self._style_button(button, tone)
 
 		# 2-column grid
 		usr_btn.grid(row=0, column=0, padx=8, pady=6)
@@ -215,7 +293,7 @@ class App:
 		ges_btn.grid(row=2, column=0, columnspan=2, padx=8, pady=6)
 
 		# Back button
-		back_frm = tk.Frame(frm)
+		back_frm = tk.Frame(frm, bg=self.COLORS["canvas"])
 		back_frm.pack(pady=(10, 0))
 		back_btn = tk.Button(
 			back_frm,
@@ -223,6 +301,7 @@ class App:
 			width=12,
 			command=back_callback or (lambda: self._render_admin_menu(frm, win)),
 		)
+		self._style_button(back_btn, "primary")
 		back_btn.pack()
 		self._add_navigation_buttons(frm, win, back_callback or (lambda: self._render_admin_menu(frm, win)))
 

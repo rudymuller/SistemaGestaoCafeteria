@@ -15,32 +15,40 @@ class MenuFunc:
         for widget in self.frame.winfo_children():
             widget.destroy()
 
-        tk.Label(
+        title = tk.Label(
             self.frame,
             text="Menu de Atendimento",
             font=("Segoe UI", 14, "bold"),
-        ).pack(pady=(4, 12))
-        tk.Label(
+        )
+        title.configure(bg=self.app.COLORS["canvas"], fg=self.app.COLORS["ink"])
+        title.pack(pady=(4, 12))
+        subtitle = tk.Label(
             self.frame,
             text="Selecione uma opção para continuar:",
             wraplength=380,
             justify=tk.CENTER,
-        ).pack(pady=6)
+        )
+        self.app._style_subtitle(subtitle)
+        subtitle.pack(pady=6)
 
-        options = tk.Frame(self.frame)
+        options = tk.Frame(self.frame, bg=self.app.COLORS["canvas"])
         options.pack(pady=(8, 6))
-        tk.Button(
+        pedidos_button = tk.Button(
             options,
             text="Pedidos",
             width=40,
             command=lambda: self.open_placeholder("Pedidos"),
-        ).pack(pady=6)
-        tk.Button(
+        )
+        self.app._style_button(pedidos_button, "primary")
+        pedidos_button.pack(pady=6)
+        estoque_button = tk.Button(
             options,
             text="Estoque",
             width=40,
             command=self.open_estoque,
-        ).pack(pady=6)
+        )
+        self.app._style_button(estoque_button, "success")
+        estoque_button.pack(pady=6)
         self.app._maximize_window(self.win)
         self.app._add_navigation_buttons(
             self.frame,

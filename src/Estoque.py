@@ -160,9 +160,9 @@ class Estoque:
         for widget in frame.winfo_children():
             widget.destroy()
 
-        tk.Label(frame, text="Gestão de Estoque", font=("Segoe UI", 14, "bold")).pack(
-            pady=(4, 10)
-        )
+        title = tk.Label(frame, text="Gestão de Estoque", font=("Segoe UI", 16, "bold"))
+        title.configure(bg=app.COLORS["canvas"], fg=app.COLORS["ink"])
+        title.pack(pady=(4, 10))
 
         columns = ("id", "nome", "categoria", "marca", "fornecedor", "quantidade", "unidade", "validade")
         table = ttk.Treeview(frame, columns=columns, show="headings", height=10)
@@ -175,6 +175,12 @@ class Estoque:
         for column in columns:
             table.heading(column, text=headings[column])
             table.column(column, width=widths[column], anchor=tk.CENTER)
+        style = ttk.Style(frame)
+        style.configure("Treeview", rowheight=28, font=("Segoe UI", 10), background=app.COLORS["surface"],
+                        fieldbackground=app.COLORS["surface"], foreground=app.COLORS["ink"])
+        style.configure("Treeview.Heading", font=("Segoe UI", 10, "bold"), background=app.COLORS["primary"],
+                        foreground="white")
+        style.map("Treeview", background=[("selected", app.COLORS["primary"])], foreground=[("selected", "white")])
         table.pack(expand=True, fill=tk.BOTH, pady=(0, 8))
 
         def refresh():
@@ -262,13 +268,17 @@ class Estoque:
 
         actions = tk.Frame(frame)
         actions.pack(pady=(0, 8))
-        tk.Button(actions, text="Adicionar", width=14, command=add_item).pack(side=tk.LEFT, padx=4)
-        tk.Button(actions, text="Editar", width=14, command=edit_item).pack(side=tk.LEFT, padx=4)
-        tk.Button(actions, text="Excluir", width=14, command=remove_item).pack(side=tk.LEFT, padx=4)
-        tk.Button(actions, text="Nova compra", width=14, command=add_purchase).pack(side=tk.LEFT, padx=4)
-        tk.Button(actions, text="Agrupar semelhantes", width=20, command=lambda: self._show_grouped_items(win)).pack(
-            side=tk.LEFT, padx=4
-        )
+        buttons = [
+            ("Adicionar", add_item, "success", 14),
+            ("Editar", edit_item, "primary", 14),
+            ("Excluir", remove_item, "danger", 14),
+            ("Nova compra", add_purchase, "warning", 14),
+            ("Agrupar semelhantes", lambda: self._show_grouped_items(win), "primary", 20),
+        ]
+        for text, command, tone, width in buttons:
+            button = tk.Button(actions, text=text, width=width, command=command)
+            app._style_button(button, tone)
+            button.pack(side=tk.LEFT, padx=4)
         refresh()
 
         app._maximize_window(win)

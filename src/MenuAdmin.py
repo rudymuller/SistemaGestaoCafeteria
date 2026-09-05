@@ -15,34 +15,42 @@ class MenuAdmin:
         for widget in self.frame.winfo_children():
             widget.destroy()
 
-        tk.Label(
+        title = tk.Label(
             self.frame,
             text="Menu Administrativo",
             font=("Segoe UI", 14, "bold"),
-        ).pack(pady=(4, 12))
-        tk.Label(
+        )
+        self.app._style_heading(title)
+        title.pack(pady=(4, 12))
+        subtitle = tk.Label(
             self.frame,
             text="Aqui você encontrará opções administrativas:",
             wraplength=380,
             justify=tk.CENTER,
-        ).pack(pady=6)
+        )
+        self.app._style_subtitle(subtitle)
+        subtitle.pack(pady=6)
 
-        menu_frame = tk.Frame(self.frame)
+        menu_frame = tk.Frame(self.frame, bg=self.app.COLORS["canvas"])
         menu_frame.pack(pady=(8, 6))
-        tk.Button(
+        pedidos_button = tk.Button(
             menu_frame,
             text="Pedidos",
             width=40,
             command=self.open_pedidos,
-        ).grid(row=0, column=0, padx=8, pady=6)
-        tk.Button(
+        )
+        self.app._style_button(pedidos_button, "primary")
+        pedidos_button.grid(row=0, column=0, padx=8, pady=6)
+        controle_button = tk.Button(
             menu_frame,
             text="Controle",
             width=40,
             command=lambda: self.app._render_controle_menu(
                 self.frame, self.win, self.render, self.login_instance
             ),
-        ).grid(row=0, column=1, padx=8, pady=6)
+        )
+        self.app._style_button(controle_button, "success")
+        controle_button.grid(row=0, column=1, padx=8, pady=6)
         self.app._maximize_window(self.win)
         self.app._add_navigation_buttons(
             self.frame,
