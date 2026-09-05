@@ -41,6 +41,12 @@ class MenuFunc:
             width=40,
             command=lambda: self.open_placeholder("Estoque"),
         ).pack(pady=6)
+        tk.Button(
+            options,
+            text="Alterar login",
+            width=40,
+            command=lambda: self.app._open_change_login(self.login_instance),
+        ).pack(pady=6)
 
         self.app._maximize_window(self.win)
         self.app._add_navigation_buttons(self.frame, self.win, self.render)

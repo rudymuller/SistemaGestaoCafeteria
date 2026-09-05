@@ -17,6 +17,7 @@ class Login:
       self.parent = parent
       self.username = None
       self.password = None
+      self.user = None
       # userType: True for admin, False for atend, None for not-set/other users
       self.userType = None
       # auth_handler: callable(username, password) -> AuthResult-like object
@@ -71,6 +72,7 @@ class Login:
                res = self.auth_handler(u, p)
                # Res may be an AuthResult-like object with access_type attribute
                if getattr(res, 'ok', False):
+                  self.user = getattr(res, 'user', None)
                   at = getattr(res, 'access_type', None)
                   if at == 'admin':
                      self.userType = True

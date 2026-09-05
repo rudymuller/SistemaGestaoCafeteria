@@ -142,6 +142,56 @@ class App:
 		tk.Button(navigation, text='Menu Principal', command=main_callback).pack(side=tk.LEFT, padx=6)
 		tk.Button(navigation, text='Sair', command=lambda: self._confirm_exit(win)).pack(side=tk.RIGHT, padx=6)
 
+	def _open_change_login(self, login_instance):
+		"""Open the form for changing the authenticated user's login."""
+		user = getattr(login_instance, 'user', None)
+		if not user or not user.get('id'):
+			messagebox.showinfo(
+				"Alterar login",
+				"As contas padrão não podem ser alteradas por esta tela.",
+			)
+			return
+
+		from Usuario import Usuario
+		change_win = tk.Toplevel()
+		change_win.title("Alterar login")
+		change_win.geometry("420x220")
+		form = tk.Frame(change_win, padx=16, pady=16)
+		form.pack(expand=True, fill=tk.BOTH)
+
+		tk.Label(form, text="Novo nome de usuário:").grid(row=0, column=0, sticky=tk.W, pady=6)
+		username_entry = tk.Entry(form, width=30)
+		username_entry.insert(0, user.get('nome_usuario', ''))
+		username_entry.grid(row=0, column=1, padx=6, pady=6)
+
+		tk.Label(form, text="Nova senha:").grid(row=1, column=0, sticky=tk.W, pady=6)
+		password_entry = tk.Entry(form, width=30, show="*")
+		password_entry.grid(row=1, column=1, padx=6, pady=6)
+
+		def save_login():
+			new_username = username_entry.get().strip()
+			new_password = password_entry.get()
+			if not new_username:
+				messagebox.showwarning("Alterar login", "Informe um nome de usuário.", parent=change_win)
+				return
+			fields = {'nome_usuario': new_username}
+			if new_password:
+				fields['senha'] = new_password
+			try:
+				updated = Usuario().atualizar(user['id'], **fields)
+			except Exception as error:
+				messagebox.showerror("Alterar login", f"Não foi possível alterar o login:\n{error}", parent=change_win)
+				return
+			if updated:
+				login_instance.username = new_username
+				login_instance.user.update(fields)
+				messagebox.showinfo("Alterar login", "Login alterado com sucesso.", parent=change_win)
+				change_win.destroy()
+			else:
+				messagebox.showwarning("Alterar login", "Usuário não encontrado.", parent=change_win)
+
+		tk.Button(form, text="Salvar", command=save_login).grid(row=2, column=0, columnspan=2, pady=(14, 0))
+
 	def _confirm_exit(self, win):
 		if messagebox.askyesno('Sair', 'Deseja realmente sair da aplicação?'):
 			win._root().destroy()

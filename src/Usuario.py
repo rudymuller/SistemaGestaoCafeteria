@@ -18,6 +18,20 @@ class User:
     tipo_acesso: str | None = None
     ativo: int = 1
 
+    @property
+    def dadosUsusario(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "nome": self.nome,
+            "sobrenome": self.sobrenome,
+            "cpf": self.cpf,
+            "nome_usuario": self.nome_usuario,
+            "senha": self.senha,
+            "data_admissao": self.data_admissao,
+            "tipo_acesso": self.tipo_acesso,
+            "ativo": self.ativo,
+        }
+
 
 class Usuario:
     """User manager backed by SysDB (managed via DBProxy).
