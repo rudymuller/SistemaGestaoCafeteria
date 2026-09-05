@@ -64,6 +64,31 @@ class Estoque:
         return self.adicionar(nome, marca, fornecedor, vencimento, qtd_minima,
                               unidade, qtd_disponivel, data_compra, lote, categoria)
 
+    def adicionar_compra(self, item_id: int, vencimento, qtd_disponivel,
+                         data_compra, lote) -> int:
+        """Registra uma nova compra de um item, mantendo o lançamento anterior."""
+        item = self.obter(item_id)
+        if not item or not item.get("ativo"):
+            raise ValueError("item ativo não encontrado")
+        if qtd_disponivel is None or float(qtd_disponivel) <= 0:
+            raise ValueError("a quantidade da compra deve ser maior que zero")
+
+        now = datetime.utcnow().isoformat()
+        cur = self.db.execute(
+            """
+            INSERT INTO estoque
+                (nome, categoria, marca, fornecedor, vencimento, qtd_minima, unidade,
+                 qtd_disponivel, data_compra, lote, ativo, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+            """,
+            (item["nome"], item.get("categoria"), item.get("marca"),
+             item.get("fornecedor"), vencimento, item["qtd_minima"],
+             item["unidade"], float(qtd_disponivel), data_compra, lote, now),
+            commit=True,
+        )
+        self.dadosItem = self.obter(cur.lastrowid) or {}
+        return cur.lastrowid
+
     def atualizar(self, item_id: int, **fields) -> bool:
         allowed = {"nome", "categoria", "marca", "fornecedor", "vencimento", "qtd_minima",
                    "unidade", "qtd_disponivel", "data_compra", "lote", "ativo"}
@@ -106,6 +131,21 @@ class Estoque:
         if not include_inativos:
             sql += " WHERE ativo = 1"
         rows = self.db.query_all(sql + " ORDER BY id DESC")
+        return [dict(row) for row in rows]
+
+    def agrupar_itens_semelhantes(self) -> List[Dict[str, Any]]:
+        """Agrupa itens ativos e soma a quantidade disponível de cada grupo."""
+        rows = self.db.query_all(
+            """
+            SELECT nome, categoria, marca, fornecedor, unidade,
+                   SUM(qtd_disponivel) AS qtd_disponivel,
+                   COUNT(*) AS quantidade_itens
+            FROM estoque
+            WHERE ativo = 1
+            GROUP BY nome, categoria, marca, fornecedor, unidade
+            ORDER BY nome, categoria, marca
+            """
+        )
         return [dict(row) for row in rows]
 
     def close(self):
@@ -213,17 +253,90 @@ class Estoque:
                 self.remover(item_id)
                 refresh()
 
+        def add_purchase():
+            item_id = selected_id()
+            if item_id is not None:
+                item = self.obter(item_id)
+                if item:
+                    self._open_purchase_form(win, item, refresh)
+
         actions = tk.Frame(frame)
         actions.pack(pady=(0, 8))
         tk.Button(actions, text="Adicionar", width=14, command=add_item).pack(side=tk.LEFT, padx=4)
         tk.Button(actions, text="Editar", width=14, command=edit_item).pack(side=tk.LEFT, padx=4)
         tk.Button(actions, text="Excluir", width=14, command=remove_item).pack(side=tk.LEFT, padx=4)
+        tk.Button(actions, text="Nova compra", width=14, command=add_purchase).pack(side=tk.LEFT, padx=4)
+        tk.Button(actions, text="Agrupar semelhantes", width=20, command=lambda: self._show_grouped_items(win)).pack(
+            side=tk.LEFT, padx=4
+        )
         refresh()
 
         app._maximize_window(win)
         app._add_navigation_buttons(
             frame, win, lambda: self._render_menu(app, login_instance, win, frame),
             lambda: app._logout(win),
+        )
+
+    def _show_grouped_items(self, parent):
+        window = tk.Toplevel(parent)
+        window.title("Estoque agrupado")
+        window.geometry("780x360")
+        columns = ("nome", "categoria", "marca", "fornecedor", "unidade", "total", "itens")
+        table = ttk.Treeview(window, columns=columns, show="headings")
+        headings = {
+            "nome": "Nome", "categoria": "Categoria", "marca": "Marca",
+            "fornecedor": "Fornecedor", "unidade": "Unidade",
+            "total": "Quantidade total", "itens": "Itens agrupados",
+        }
+        for column in columns:
+            table.heading(column, text=headings[column])
+            table.column(column, width=105, anchor=tk.CENTER)
+        table.pack(expand=True, fill=tk.BOTH, padx=10, pady=10)
+        for item in self.agrupar_itens_semelhantes():
+            table.insert("", tk.END, values=(
+                item["nome"], item["categoria"] or "", item["marca"] or "",
+                item["fornecedor"] or "", item["unidade"], item["qtd_disponivel"],
+                item["quantidade_itens"],
+            ))
+
+    def _open_purchase_form(self, parent, item, on_saved):
+        form = tk.Toplevel(parent)
+        form.title("Registrar nova compra")
+        form.transient(parent)
+        form.grab_set()
+        form_frame = tk.Frame(form, padx=14, pady=14)
+        form_frame.pack(expand=True, fill=tk.BOTH)
+        tk.Label(
+            form_frame,
+            text=f"Item: {item['nome']} | Categoria: {item.get('categoria') or 'Não informada'}",
+        ).grid(row=0, column=0, columnspan=2, sticky=tk.W, pady=(0, 10))
+
+        fields = [
+            ("Novo vencimento", "vencimento"),
+            ("Quantidade comprada", "qtd_disponivel"),
+            ("Data da compra", "data_compra"),
+            ("Novo lote", "lote"),
+        ]
+        entries = {}
+        for row, (label, key) in enumerate(fields, start=1):
+            tk.Label(form_frame, text=label + ":").grid(row=row, column=0, sticky=tk.W, pady=3)
+            entry = tk.Entry(form_frame, width=32)
+            entry.grid(row=row, column=1, padx=(8, 0), pady=3)
+            entries[key] = entry
+
+        def save():
+            values = {key: entry.get().strip() or None for key, entry in entries.items()}
+            try:
+                values["qtd_disponivel"] = float(values["qtd_disponivel"])
+                self.adicionar_compra(item["id"], **values)
+            except (TypeError, ValueError) as error:
+                messagebox.showerror("Estoque", f"Dados inválidos: {error}", parent=form)
+                return
+            form.destroy()
+            on_saved()
+
+        tk.Button(form_frame, text="Registrar compra", command=save).grid(
+            row=len(fields) + 1, column=0, columnspan=2, pady=(10, 0)
         )
 
     def __str__(self):
