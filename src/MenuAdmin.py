@@ -39,7 +39,9 @@ class MenuAdmin:
             menu_frame,
             text="Controle",
             width=40,
-            command=lambda: self.app._render_controle_menu(self.frame, self.win, self.render),
+            command=lambda: self.app._render_controle_menu(
+                self.frame, self.win, self.render, self.login_instance
+            ),
         ).grid(row=0, column=1, padx=8, pady=6)
         self.app._maximize_window(self.win)
         self.app._add_navigation_buttons(

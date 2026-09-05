@@ -182,7 +182,7 @@ class App:
 		self._add_navigation_buttons(frm, win, lambda: self._render_admin_menu(frm, win))
 
 
-	def _render_controle_menu(self, frm, win, back_callback=None):
+	def _render_controle_menu(self, frm, win, back_callback=None, login_instance=None):
 		# replace frame contents with controle submenu
 		for w in list(frm.winfo_children()):
 			w.destroy()
@@ -197,7 +197,12 @@ class App:
 		opts.pack(pady=4)
 
 		usr_btn = tk.Button(opts, text="Usuários", width=20, command=lambda: self._render_user_management(frm, win, back_callback))
-		est_btn = tk.Button(opts, text="Estoque", width=20, command=lambda: self._open_placeholder('Estoque'))
+		est_btn = tk.Button(
+			opts,
+			text="Estoque",
+			width=20,
+			command=lambda: self._open_estoque_menu(login_instance),
+		)
 		gas_btn = tk.Button(opts, text="Gastos", width=20, command=lambda: self._open_placeholder('Gastos'))
 		fat_btn = tk.Button(opts, text="Faturamento", width=20, command=lambda: self._open_placeholder('Faturamento'))
 		ges_btn = tk.Button(opts, text="Gestão", width=20, command=lambda: self._open_placeholder('Gestão'))
@@ -224,6 +229,14 @@ class App:
 
 	def _open_placeholder(self, title: str):
 		messagebox.showinfo(title, f"Abrindo {title} (placeholder)")
+
+
+	def _open_estoque_menu(self, login_instance):
+		if login_instance is None:
+			messagebox.showwarning("Estoque", "Não foi possível identificar o usuário logado.")
+			return
+		from Estoque import Estoque
+		Estoque().abrir_menu(self, login_instance)
 
 
 	def _render_user_management(self, frm, win, main_callback=None):

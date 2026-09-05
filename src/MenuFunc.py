@@ -39,7 +39,7 @@ class MenuFunc:
             options,
             text="Estoque",
             width=40,
-            command=lambda: self.open_placeholder("Estoque"),
+            command=self.open_estoque,
         ).pack(pady=6)
         self.app._maximize_window(self.win)
         self.app._add_navigation_buttons(
@@ -51,3 +51,7 @@ class MenuFunc:
 
     def open_placeholder(self, title):
         messagebox.showinfo(title, f"Abrindo {title} (placeholder)")
+
+    def open_estoque(self):
+        from Estoque import Estoque
+        Estoque().abrir_menu(self.app, self.login_instance)
