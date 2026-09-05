@@ -151,10 +151,17 @@ class Estoque:
     def close(self):
         self.db.close()
 
-    def abrir_menu(self, app, login_instance):
-        """Abre a tela de gerenciamento de estoque da aplicação."""
-        win, frame = app._new_menu_window(login_instance, "Gestão de Estoque")
+    def abrir_menu(self, app, login_instance, win=None, frame=None):
+        """Abre o estoque, reutilizando a janela atual quando disponível."""
+        if win is None or frame is None:
+            win, frame = app._new_menu_window(login_instance, "Gestão de Estoque")
+        else:
+            win.title("Gestão de Estoque")
         self._render_menu(app, login_instance, win, frame)
+
+    @staticmethod
+    def _voltar_menu_principal(app, login_instance, win, frame):
+        app._render_main_menu_in_window(login_instance, win, frame)
 
     def _render_menu(self, app, login_instance, win, frame):
         for widget in frame.winfo_children():
@@ -283,7 +290,7 @@ class Estoque:
 
         app._maximize_window(win)
         app._add_navigation_buttons(
-            frame, win, lambda: self._render_menu(app, login_instance, win, frame),
+            frame, win, lambda: self._voltar_menu_principal(app, login_instance, win, frame),
             lambda: app._logout(win),
         )
 

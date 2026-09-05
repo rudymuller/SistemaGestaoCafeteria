@@ -34,6 +34,10 @@ class App:
 		"Excluir": "−",
 		"Nova compra": "＋",
 		"Agrupar semelhantes": "≡",
+		"Salvar": "✓",
+		"Cancelar": "×",
+		"Atualizar": "↻",
+		"Remover": "−",
 	}
 
 	def _style_button(self, button, tone="primary"):
@@ -172,6 +176,26 @@ class App:
 		else:
 			messagebox.showwarning("Tipo de usuário", "Tipo de usuário não identificado (userType=None).\nVerifique as credenciais ou cadastre o usuário.")
 
+	def _render_main_menu_in_window(self, login_instance, win, frame):
+		"""Renderiza o menu principal na janela atual, evitando recriá-la."""
+		ut = getattr(login_instance, "userType", None)
+		if ut is True:
+			from MenuAdmin import MenuAdmin
+			menu = MenuAdmin.__new__(MenuAdmin)
+			menu.app = self
+			menu.login_instance = login_instance
+			menu.win = win
+			menu.frame = frame
+			menu.render()
+		elif ut is False:
+			from MenuFunc import MenuFunc
+			menu = MenuFunc.__new__(MenuFunc)
+			menu.app = self
+			menu.login_instance = login_instance
+			menu.win = win
+			menu.frame = frame
+			menu.render()
+
 
 	def _new_menu_window(self, login_instance, title: str):
 		"""Create a new menu window (Toplevel or Tk) and return (win, frame).
@@ -183,6 +207,7 @@ class App:
 		win.title(title)
 		win.geometry("760x560")
 		win.configure(bg=self.COLORS["canvas"])
+		win.protocol("WM_DELETE_WINDOW", lambda: self._confirm_exit(win))
 		frm = tk.Frame(win, padx=24, pady=22, bg=self.COLORS["canvas"])
 		frm.pack(expand=True, fill=tk.BOTH)
 		return win, frm
@@ -274,7 +299,7 @@ class App:
 			opts,
 			text="Estoque",
 			width=20,
-			command=lambda: self._open_estoque_menu(login_instance),
+			command=lambda: self._open_estoque_menu(login_instance, win, frm),
 		)
 		gas_btn = tk.Button(opts, text="Gastos", width=20, command=lambda: self._open_placeholder('Gastos'))
 		fat_btn = tk.Button(opts, text="Faturamento", width=20, command=lambda: self._open_placeholder('Faturamento'))
@@ -310,12 +335,12 @@ class App:
 		messagebox.showinfo(title, f"Abrindo {title} (placeholder)")
 
 
-	def _open_estoque_menu(self, login_instance):
+	def _open_estoque_menu(self, login_instance, current_win=None, current_frame=None):
 		if login_instance is None:
 			messagebox.showwarning("Estoque", "Não foi possível identificar o usuário logado.")
 			return
 		from Estoque import Estoque
-		Estoque().abrir_menu(self, login_instance)
+		Estoque().abrir_menu(self, login_instance, current_win, current_frame)
 
 
 	def _render_user_management(self, frm, win, main_callback=None):
@@ -331,24 +356,27 @@ class App:
 		for w in list(frm.winfo_children()):
 			w.destroy()
 
-		title = tk.Label(frm, text="Gerenciamento de Usuários", font=("Segoe UI", 14, "bold"))
+		title = tk.Label(frm, text="Gerenciamento de Usuários", font=("Segoe UI", 16, "bold"))
+		self._style_heading(title)
 		title.pack(pady=(4, 8))
 
 		# top controls
-		ctrl_top = tk.Frame(frm)
+		ctrl_top = tk.Frame(frm, bg=self.COLORS["canvas"])
 		ctrl_top.pack(fill=tk.X, pady=(0, 8))
 
 		def on_add():
 			add_win = tk.Toplevel(win)
 			add_win.title('Adicionar Usuário')
 			add_win.geometry('480x360')
-			frm_add = tk.Frame(add_win, padx=12, pady=12)
+			add_win.configure(bg=self.COLORS["canvas"])
+			frm_add = tk.Frame(add_win, padx=12, pady=12, bg=self.COLORS["canvas"])
 			frm_add.pack(expand=True, fill=tk.BOTH)
 
 			labels = ['Nome', 'Sobrenome', 'CPF', 'Nome de usuário', 'Senha', 'Data admissão', 'Tipo acesso']
 			entries = {}
 			for i, lbl in enumerate(labels):
-				tk.Label(frm_add, text=lbl+':').grid(row=i, column=0, sticky=tk.W, pady=4)
+				field_label = tk.Label(frm_add, text=lbl+':', bg=self.COLORS['canvas'], fg=self.COLORS['ink'])
+				field_label.grid(row=i, column=0, sticky=tk.W, pady=4)
 				if lbl == 'Tipo acesso':
 					combo = ttk.Combobox(frm_add, values=['Administrador', 'Funcionário'], state='readonly', width=33)
 					combo.grid(row=i, column=1, pady=4, padx=6)
@@ -382,24 +410,42 @@ class App:
 				except Exception as ex:
 					messagebox.showerror('Erro', f'Falha ao adicionar usuário: {ex}')
 
-			btns = tk.Frame(frm_add)
+			btns = tk.Frame(frm_add, bg=self.COLORS["canvas"])
 			btns.grid(row=len(labels), column=0, columnspan=2, pady=(12,0))
-			tk.Button(btns, text='Salvar', command=submit_add).pack(side=tk.LEFT, padx=6)
-			tk.Button(btns, text='Cancelar', command=add_win.destroy).pack(side=tk.LEFT, padx=6)
-			nav_add = tk.Frame(frm_add)
+			save_button = tk.Button(btns, text='Salvar', command=submit_add)
+			self._style_button(save_button)
+			save_button.pack(side=tk.LEFT, padx=6)
+			cancel_button = tk.Button(btns, text='Cancelar', command=add_win.destroy)
+			self._style_button(cancel_button)
+			cancel_button.pack(side=tk.LEFT, padx=6)
+			nav_add = tk.Frame(frm_add, bg=self.COLORS["canvas"])
 			nav_add.grid(row=len(labels) + 1, column=0, columnspan=2, pady=(8, 0))
-			tk.Button(nav_add, text='Menu Principal', command=lambda: self._close_and_return(add_win, main_callback)).pack(side=tk.LEFT, padx=6)
-			tk.Button(nav_add, text='Sair', command=lambda: self._confirm_exit(add_win)).pack(side=tk.LEFT, padx=6)
+			main_button = tk.Button(nav_add, text='Menu Principal', command=lambda: self._close_and_return(add_win, main_callback))
+			self._style_button(main_button)
+			main_button.pack(side=tk.LEFT, padx=6)
+			exit_button = tk.Button(nav_add, text='Sair', command=lambda: self._confirm_exit(add_win))
+			self._style_button(exit_button)
+			exit_button.pack(side=tk.LEFT, padx=6)
 
 		add_btn = tk.Button(ctrl_top, text='Adicionar', width=12, command=on_add)
+		self._style_button(add_btn)
 		add_btn.pack(side=tk.LEFT)
 
 		back_btn = tk.Button(ctrl_top, text='Voltar', width=12, command=lambda: self._render_controle_menu(frm, win, main_callback))
+		self._style_button(back_btn)
 		back_btn.pack(side=tk.RIGHT)
 
 		# Treeview list for users
 		cols = ('id', 'nome', 'sobrenome', 'nome_usuario', 'cpf', 'tipo_acesso', 'ativo')
 		tree = ttk.Treeview(frm, columns=cols, show='headings', selectmode='browse')
+		tree_style = ttk.Style(frm)
+		tree_style.configure('Users.Treeview', rowheight=28, font=('Segoe UI', 10),
+			background=self.COLORS['surface'], fieldbackground=self.COLORS['surface'],
+			foreground=self.COLORS['ink'])
+		tree_style.configure('Users.Treeview.Heading', font=('Segoe UI', 10, 'bold'),
+			background=self.COLORS['primary'], foreground='white')
+		tree_style.map('Users.Treeview', background=[('selected', self.COLORS['primary'])], foreground=[('selected', 'white')])
+		tree.configure(style='Users.Treeview')
 		label_map = {
 			'id': 'ID',
 			'nome': 'Nome',
@@ -420,10 +466,11 @@ class App:
 		vsb.pack(side=tk.LEFT, fill=tk.Y)
 
 		# action area
-		action_frame = tk.Frame(frm, padx=8)
+		action_frame = tk.Frame(frm, padx=8, bg=self.COLORS['canvas'])
 		action_frame.pack(side=tk.RIGHT, fill=tk.Y)
 
-		info_label = tk.Label(action_frame, text='Selecione um usuário', wraplength=180)
+		info_label = tk.Label(action_frame, text='Selecione um usuário', wraplength=180,
+			bg=self.COLORS['canvas'], fg=self.COLORS['muted'], font=('Segoe UI', 10))
 		info_label.pack(pady=(4,8))
 
 		selected_user_id = {'id': None}
@@ -489,13 +536,15 @@ class App:
 			upd_win = tk.Toplevel(win)
 			upd_win.title('Atualizar usuário')
 			upd_win.geometry('480x380')
-			fup = tk.Frame(upd_win, padx=12, pady=12)
+			upd_win.configure(bg=self.COLORS['canvas'])
+			fup = tk.Frame(upd_win, padx=12, pady=12, bg=self.COLORS['canvas'])
 			fup.pack(expand=True, fill=tk.BOTH)
 
 			labels = [('Nome','nome'),('Sobrenome','sobrenome'),('CPF','cpf'),('Nome de usuário','nome_usuario'),('Senha (deixe em branco para não alterar)','senha'),('Data admissão','data_admissao'),('Tipo acesso','tipo_acesso')]
 			entries = {}
 			for i, (lbl, key) in enumerate(labels):
-				tk.Label(fup, text=lbl+':').grid(row=i, column=0, sticky=tk.W, pady=4)
+				field_label = tk.Label(fup, text=lbl+':', bg=self.COLORS['canvas'], fg=self.COLORS['ink'])
+				field_label.grid(row=i, column=0, sticky=tk.W, pady=4)
 				if key == 'tipo_acesso':
 					# show combobox, map stored value ('admin'/'atend') to display
 					combo = ttk.Combobox(fup, values=['Administrador', 'Funcionário'], state='readonly', width=33)
@@ -515,8 +564,9 @@ class App:
 
 			# ativo checkbox (allow re-activation)
 			ativo_var = tk.IntVar(value=1 if data.get('ativo', 1) == 1 else 0)
-			tk.Label(fup, text='Ativo:').grid(row=len(labels), column=0, sticky=tk.W, pady=4)
-			ativo_chk = tk.Checkbutton(fup, variable=ativo_var)
+			active_label = tk.Label(fup, text='Ativo:', bg=self.COLORS['canvas'], fg=self.COLORS['ink'])
+			active_label.grid(row=len(labels), column=0, sticky=tk.W, pady=4)
+			ativo_chk = tk.Checkbutton(fup, variable=ativo_var, bg=self.COLORS['canvas'], activebackground=self.COLORS['canvas'])
 			ativo_chk.grid(row=len(labels), column=1, sticky=tk.W, pady=4, padx=6)
 
 			def submit_update():
@@ -547,18 +597,28 @@ class App:
 				except Exception as ex:
 					messagebox.showerror('Erro', f'Falha ao atualizar: {ex}')
 
-			bfr = tk.Frame(fup)
+			bfr = tk.Frame(fup, bg=self.COLORS['canvas'])
 			# move buttons down one row so they don't overlap the 'Ativo' checkbox
 			bfr.grid(row=len(labels) + 1, column=0, columnspan=2, pady=(12,0))
-			tk.Button(bfr, text='Salvar', command=submit_update).pack(side=tk.LEFT, padx=6)
-			tk.Button(bfr, text='Cancelar', command=upd_win.destroy).pack(side=tk.LEFT, padx=6)
-			nav_update = tk.Frame(fup)
+			save_update_button = tk.Button(bfr, text='Salvar', command=submit_update)
+			self._style_button(save_update_button)
+			save_update_button.pack(side=tk.LEFT, padx=6)
+			cancel_update_button = tk.Button(bfr, text='Cancelar', command=upd_win.destroy)
+			self._style_button(cancel_update_button)
+			cancel_update_button.pack(side=tk.LEFT, padx=6)
+			nav_update = tk.Frame(fup, bg=self.COLORS['canvas'])
 			nav_update.grid(row=len(labels) + 2, column=0, columnspan=2, pady=(8, 0))
-			tk.Button(nav_update, text='Menu Principal', command=lambda: self._close_and_return(upd_win, main_callback)).pack(side=tk.LEFT, padx=6)
-			tk.Button(nav_update, text='Sair', command=lambda: self._confirm_exit(upd_win)).pack(side=tk.LEFT, padx=6)
+			main_update_button = tk.Button(nav_update, text='Menu Principal', command=lambda: self._close_and_return(upd_win, main_callback))
+			self._style_button(main_update_button)
+			main_update_button.pack(side=tk.LEFT, padx=6)
+			exit_update_button = tk.Button(nav_update, text='Sair', command=lambda: self._confirm_exit(upd_win))
+			self._style_button(exit_update_button)
+			exit_update_button.pack(side=tk.LEFT, padx=6)
 
 		btn_update = tk.Button(action_frame, text='Atualizar', width=16, command=do_update)
 		btn_remove = tk.Button(action_frame, text='Remover', width=16, command=do_remove)
+		self._style_button(btn_update)
+		self._style_button(btn_remove)
 
 		refresh_list()
 		self._add_navigation_buttons(frm, win, main_callback or (lambda: self._render_controle_menu(frm, win)))

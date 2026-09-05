@@ -62,4 +62,4 @@ class MenuFunc:
 
     def open_estoque(self):
         from Estoque import Estoque
-        Estoque().abrir_menu(self.app, self.login_instance)
+        Estoque().abrir_menu(self.app, self.login_instance, self.win, self.frame)
