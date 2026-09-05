@@ -41,15 +41,13 @@ class MenuAdmin:
             width=40,
             command=lambda: self.app._render_controle_menu(self.frame, self.win, self.render),
         ).grid(row=0, column=1, padx=8, pady=6)
-        tk.Button(
-            menu_frame,
-            text="Alterar login",
-            width=40,
-            command=lambda: self.app._open_change_login(self.login_instance),
-        ).grid(row=1, column=0, columnspan=2, padx=8, pady=6)
-
         self.app._maximize_window(self.win)
-        self.app._add_navigation_buttons(self.frame, self.win, self.render)
+        self.app._add_navigation_buttons(
+            self.frame,
+            self.win,
+            self.render,
+            lambda: self.app._logout(self.win),
+        )
 
     def open_pedidos(self):
         try:
