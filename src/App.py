@@ -25,18 +25,18 @@ class App:
 		"danger": "#294F65",
 	}
 	ICONS = {
-		"Entrar": "\uf2f6", "Sair": "\uf00d", "Menu Principal": "\uf015",
+		"Entrar": "\uf2f6", "Sair": "\uf00d", "Menu Principal": "\uf015", "Home": "\uf015",
 		"Sair da conta": "\uf2f5", "Voltar": "\uf053", "Pedidos": "\uf46d",
-		"Controle": "\uf013", "Usuários": "\uf0c0", "Estoque": "\uf468",
+		"Usuários": "\uf0c0", "Estoque": "\uf468",
 		"Gastos": "\uf0d6", "Faturamento": "\uf080", "Gestão": "\uf009",
 		"Adicionar": "\uf067", "Editar": "\uf044", "Excluir": "\uf1f8",
 		"Nova compra": "\uf217", "Agrupar semelhantes": "\uf0c9", "Salvar": "\uf0c7",
 		"Cancelar": "\uf00d", "Atualizar": "\uf021", "Remover": "\uf068",
 	}
 	FALLBACK_ICONS = {
-		"Entrar": "➜", "Sair": "×", "Menu Principal": "⌂",
+		"Entrar": "➜", "Sair": "×", "Menu Principal": "⌂", "Home": "⌂",
 		"Sair da conta": "⇥", "Voltar": "‹", "Pedidos": "▣",
-		"Controle": "⚙", "Usuários": "♙", "Estoque": "▤", "Gastos": "¤",
+		"Usuários": "♙", "Estoque": "▤", "Gastos": "¤",
 		"Faturamento": "▥", "Gestão": "◆", "Adicionar": "+", "Editar": "✎",
 		"Excluir": "−", "Nova compra": "＋", "Agrupar semelhantes": "≡",
 		"Salvar": "✓", "Cancelar": "×", "Atualizar": "↻", "Remover": "−",
@@ -233,7 +233,7 @@ class App:
 
 
 	def _new_menu_window(self, login_instance, title: str):
-		"""Create a new menu window (Toplevel or Tk) and return (win, frame).
+		"""Create a window with a persistent sidebar and return its content frame.
 
 		The login_instance.parent determines whether the new window should be a
 		Toplevel (attached) or a fresh Tk root.
@@ -243,9 +243,122 @@ class App:
 		win.geometry("760x560")
 		win.configure(bg=self.COLORS["canvas"])
 		win.protocol("WM_DELETE_WINDOW", lambda: self._confirm_exit(win))
-		frm = tk.Frame(win, padx=24, pady=22, bg=self.COLORS["canvas"])
-		frm.pack(expand=True, fill=tk.BOTH)
+		shell = tk.Frame(win, bg=self.COLORS["canvas"])
+		shell.pack(expand=True, fill=tk.BOTH)
+		sidebar = tk.Frame(shell, width=210, padx=12, pady=18, bg=self.COLORS["primary_dark"])
+		sidebar.pack(side=tk.LEFT, fill=tk.Y)
+		sidebar.pack_propagate(False)
+		frm = tk.Frame(shell, padx=28, pady=22, bg=self.COLORS["canvas"])
+		frm.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
+		self._build_sidebar(sidebar, frm, win, login_instance)
 		return win, frm
+
+	def _build_sidebar(self, sidebar, content, win, login_instance):
+		"""Create navigation that stays visible while content changes."""
+		is_admin = getattr(login_instance, "userType", False) is True
+		title = tk.Label(
+			sidebar,
+			text="CAFETERIA\nGESTÃO",
+			font=("Segoe UI", 14, "bold"),
+			bg=self.COLORS["primary_dark"],
+			fg="white",
+			justify=tk.LEFT,
+		)
+		title.pack(anchor=tk.W, pady=(2, 24))
+
+		def render_main():
+			self._render_main_menu_in_window(login_instance, win, content)
+
+		def render_users():
+			self._render_user_management(content, win, render_main)
+
+		def render_stock():
+			self._open_estoque_menu(login_instance, win, content)
+
+		items = [("Home", render_main)]
+		if is_admin:
+			items.extend([
+				("Pedidos", lambda: self._open_placeholder("Pedidos")),
+				("Usuários", render_users),
+				("Estoque", render_stock),
+				("Gastos", lambda: self._open_placeholder("Gastos")),
+				("Faturamento", lambda: self._open_placeholder("Faturamento")),
+				("Gestão", lambda: self._open_placeholder("Gestão")),
+			])
+		else:
+			items.extend([
+				("Pedidos", lambda: self._open_placeholder("Pedidos")),
+				("Estoque", render_stock),
+			])
+
+		for label, command in items:
+			button = tk.Button(sidebar, text=label, command=command, anchor=tk.W)
+			self._style_button(button, "primary")
+			button.configure(bg=self.COLORS["primary_dark"], activebackground=self.COLORS["primary"])
+			button.pack(fill=tk.X, pady=3)
+
+		logout = tk.Button(sidebar, text="Sair da conta", command=lambda: self._logout(win), anchor=tk.W)
+		self._style_button(logout, "warning")
+		logout.configure(bg=self.COLORS["primary_dark"], activebackground=self.COLORS["primary"])
+		logout.pack(side=tk.BOTTOM, fill=tk.X, pady=3)
+
+	def _render_home(self, frame, win, login_instance, access_type):
+		"""Render the shared home screen with the logged-in user's summary."""
+		for widget in frame.winfo_children():
+			widget.destroy()
+
+		user = getattr(login_instance, "user", None) or {}
+		if isinstance(user, dict):
+			first_name = user.get("nome") or ""
+			last_name = user.get("sobrenome") or ""
+			username = user.get("nome_usuario") or ""
+			stored_access = user.get("tipo_acesso")
+		else:
+			first_name = getattr(user, "nome", "") or ""
+			last_name = getattr(user, "sobrenome", "") or ""
+			username = getattr(user, "nome_usuario", "") or ""
+			stored_access = getattr(user, "tipo_acesso", None)
+
+		full_name = " ".join(value for value in (first_name, last_name) if value).strip()
+		user_display = full_name or username or "Usuário"
+		access_label = "Administrador" if access_type == "admin" else "Funcionário"
+		if stored_access in ("admin", "atend"):
+			access_label = "Administrador" if stored_access == "admin" else "Funcionário"
+
+		title = tk.Label(frame, text="Home", font=("Segoe UI", 22, "bold"))
+		self._style_heading(title)
+		title.pack(pady=(18, 8))
+
+		subtitle = tk.Label(
+			frame,
+			text="Visão geral do Sistema de Gestão da Cafeteria",
+			font=("Segoe UI", 11),
+			wraplength=520,
+			justify=tk.CENTER,
+		)
+		self._style_subtitle(subtitle)
+		subtitle.pack(pady=(0, 22))
+
+		logo = tk.Label(
+			frame,
+			text="LOGO\nCAFETERIA",
+			font=("Segoe UI", 20, "bold"),
+			width=16,
+			height=4,
+			bg=self.COLORS["surface"],
+			fg=self.COLORS["primary"],
+			relief=tk.GROOVE,
+			borderwidth=2,
+		)
+		logo.pack(pady=(4, 24))
+
+		info = tk.Frame(frame, bg=self.COLORS["canvas"])
+		info.pack(pady=4)
+		for row, (label, value) in enumerate((("Usuário", user_display), ("Tipo de acesso", access_label))):
+			label_widget = tk.Label(info, text=f"{label}:", font=("Segoe UI", 12, "bold"), anchor=tk.E,			bg=self.COLORS["canvas"], fg=self.COLORS["ink"], width=18)
+			label_widget.grid(row=row, column=0, padx=(0, 10), pady=6, sticky=tk.E)
+			value_widget = tk.Label(info, text=value, font=("Segoe UI", 12), anchor=tk.W,				bg=self.COLORS["canvas"], fg=self.COLORS["muted"], width=24)
+			value_widget.grid(row=row, column=1, pady=6, sticky=tk.W)
 
 
 	def _maximize_window(self, win):
@@ -282,7 +395,7 @@ class App:
 
 	def _render_admin_menu(self, frm, win):
 		"""Render the administrative menu inside the supplied frame."""
-		label = tk.Label(frm, text="Menu Administrativo", font=("Segoe UI", 14, "bold"))
+		label = tk.Label(frm, text="Menu Administrativo", font=("Segoe UI", 18, "bold"))
 		label.pack(pady=(4, 12))
 		msg = tk.Label(frm, text="Aqui você encontrará opções administrativas:", wraplength=380, justify=tk.CENTER)
 		msg.pack(pady=6)
@@ -296,72 +409,8 @@ class App:
 				messagebox.showinfo("Pedidos", "Módulo Pedidos não implementado - placeholder.")
 
 		# main admin options
-		menu_frame = tk.Frame(frm)
-		menu_frame.pack(pady=(8, 6))
-		ped_btn = tk.Button(menu_frame, text="Pedidos", width=40, command=open_pedidos)
-		ctr_btn = tk.Button(menu_frame, text="Controle", width=40, command=lambda: self._render_controle_menu(frm, win))
-		self._style_button(ped_btn)
-		self._style_button(ctr_btn)
-		ped_btn.grid(row=0, column=0, padx=8, pady=6)
-		ctr_btn.grid(row=0, column=1, padx=8, pady=6)
-
 		# maximize window
 		self._maximize_window(win)
-		self._add_navigation_buttons(frm, win, lambda: self._render_admin_menu(frm, win))
-
-
-	def _render_controle_menu(self, frm, win, back_callback=None, login_instance=None):
-		# replace frame contents with controle submenu
-		for w in list(frm.winfo_children()):
-			w.destroy()
-
-		heading = tk.Label(frm, text="Controle — Opções", font=("Segoe UI", 14, "bold"))
-		self._style_heading(heading)
-		heading.pack(pady=(4, 12))
-
-		info = tk.Label(frm, text="Gerencie usuários, estoque, gastos e faturamento:", wraplength=520, justify=tk.CENTER)
-		self._style_subtitle(info)
-		info.pack(pady=(0, 10))
-
-		opts = tk.Frame(frm, bg=self.COLORS["canvas"])
-		opts.pack(pady=4)
-
-		usr_btn = tk.Button(opts, text="Usuários", width=20, command=lambda: self._render_user_management(frm, win, back_callback))
-		est_btn = tk.Button(
-			opts,
-			text="Estoque",
-			width=20,
-			command=lambda: self._open_estoque_menu(login_instance, win, frm),
-		)
-		gas_btn = tk.Button(opts, text="Gastos", width=20, command=lambda: self._open_placeholder('Gastos'))
-		fat_btn = tk.Button(opts, text="Faturamento", width=20, command=lambda: self._open_placeholder('Faturamento'))
-		ges_btn = tk.Button(opts, text="Gestão", width=20, command=lambda: self._open_placeholder('Gestão'))
-		for button, tone in (
-			(usr_btn, "primary"), (est_btn, "success"), (gas_btn, "warning"),
-			(fat_btn, "primary"), (ges_btn, "success"),
-		):
-			self._style_button(button, tone)
-
-		# 2-column grid
-		usr_btn.grid(row=0, column=0, padx=8, pady=6)
-		est_btn.grid(row=0, column=1, padx=8, pady=6)
-		gas_btn.grid(row=1, column=0, padx=8, pady=6)
-		fat_btn.grid(row=1, column=1, padx=8, pady=6)
-		ges_btn.grid(row=2, column=0, columnspan=2, padx=8, pady=6)
-
-		# Back button
-		back_frm = tk.Frame(frm, bg=self.COLORS["canvas"])
-		back_frm.pack(pady=(10, 0))
-		back_btn = tk.Button(
-			back_frm,
-			text="Voltar",
-			width=12,
-			command=back_callback or (lambda: self._render_admin_menu(frm, win)),
-		)
-		self._style_button(back_btn, "primary")
-		back_btn.pack()
-		self._add_navigation_buttons(frm, win, back_callback or (lambda: self._render_admin_menu(frm, win)))
-
 
 	def _open_placeholder(self, title: str):
 		messagebox.showinfo(title, f"Abrindo {title} (placeholder)")
@@ -459,10 +508,6 @@ class App:
 		add_btn = tk.Button(ctrl_top, text='Adicionar', width=12, command=on_add)
 		self._style_button(add_btn)
 		add_btn.pack(side=tk.LEFT)
-
-		back_btn = tk.Button(ctrl_top, text='Voltar', width=12, command=lambda: self._render_controle_menu(frm, win, main_callback))
-		self._style_button(back_btn)
-		back_btn.pack(side=tk.RIGHT)
 
 		# Treeview list for users
 		cols = ('id', 'nome', 'sobrenome', 'nome_usuario', 'cpf', 'tipo_acesso', 'ativo')
@@ -647,7 +692,6 @@ class App:
 		self._style_button(btn_remove)
 
 		refresh_list()
-		self._add_navigation_buttons(frm, win, main_callback or (lambda: self._render_controle_menu(frm, win)))
 		# done rendering the users screen
 
 	def _close_and_return(self, win, callback):

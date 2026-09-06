@@ -167,7 +167,7 @@ class Estoque:
         for widget in frame.winfo_children():
             widget.destroy()
 
-        title = tk.Label(frame, text="Gestão de Estoque", font=("Segoe UI", 16, "bold"))
+        title = tk.Label(frame, text="Gestão de Estoque", font=("Segoe UI", 18, "bold"))
         title.configure(bg=app.COLORS["canvas"], fg=app.COLORS["ink"])
         title.pack(pady=(4, 10))
 
@@ -274,7 +274,7 @@ class Estoque:
                     self._open_purchase_form(win, item, refresh)
 
         actions = tk.Frame(frame)
-        actions.pack(pady=(0, 8))
+        actions.pack(pady=(0, 8), anchor=tk.CENTER)
         buttons = [
             ("Adicionar", add_item, "success", 14),
             ("Editar", edit_item, "primary", 14),
@@ -289,10 +289,6 @@ class Estoque:
         refresh()
 
         app._maximize_window(win)
-        app._add_navigation_buttons(
-            frame, win, lambda: self._voltar_menu_principal(app, login_instance, win, frame),
-            lambda: app._logout(win),
-        )
 
     def _show_grouped_items(self, parent):
         window = tk.Toplevel(parent)

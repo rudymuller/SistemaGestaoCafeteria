@@ -12,50 +12,9 @@ class MenuFunc:
         self.render()
 
     def render(self):
-        for widget in self.frame.winfo_children():
-            widget.destroy()
-
-        title = tk.Label(
-            self.frame,
-            text="Menu de Atendimento",
-            font=("Segoe UI", 14, "bold"),
-        )
-        title.configure(bg=self.app.COLORS["canvas"], fg=self.app.COLORS["ink"])
-        title.pack(pady=(4, 12))
-        subtitle = tk.Label(
-            self.frame,
-            text="Selecione uma opção para continuar:",
-            wraplength=380,
-            justify=tk.CENTER,
-        )
-        self.app._style_subtitle(subtitle)
-        subtitle.pack(pady=6)
-
-        options = tk.Frame(self.frame, bg=self.app.COLORS["canvas"])
-        options.pack(pady=(8, 6))
-        pedidos_button = tk.Button(
-            options,
-            text="Pedidos",
-            width=40,
-            command=lambda: self.open_placeholder("Pedidos"),
-        )
-        self.app._style_button(pedidos_button, "primary")
-        pedidos_button.pack(pady=6)
-        estoque_button = tk.Button(
-            options,
-            text="Estoque",
-            width=40,
-            command=self.open_estoque,
-        )
-        self.app._style_button(estoque_button, "success")
-        estoque_button.pack(pady=6)
+        self.win.title("Home - Gestão de Atendimento")
+        self.app._render_home(self.frame, self.win, self.login_instance, "atend")
         self.app._maximize_window(self.win)
-        self.app._add_navigation_buttons(
-            self.frame,
-            self.win,
-            self.render,
-            lambda: self.app._logout(self.win),
-        )
 
     def open_placeholder(self, title):
         messagebox.showinfo(title, f"Abrindo {title} (placeholder)")
