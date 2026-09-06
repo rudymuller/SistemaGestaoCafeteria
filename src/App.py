@@ -1,6 +1,13 @@
 import tkinter as tk
 from tkinter import messagebox, ttk, font as tkfont
+from importlib.metadata import PackageNotFoundError, distribution
+from pathlib import Path
 from const import WIN_WIDTH, WIN_HEIGHT
+
+try:
+	from PIL import Image, ImageDraw, ImageFont, ImageTk
+except ImportError:
+	Image = ImageDraw = ImageFont = ImageTk = None
 
 
 class App:
@@ -17,45 +24,71 @@ class App:
 		"danger": "#294F65",
 	}
 	ICONS = {
-		"Entrar": "➜",
-		"Sair": "×",
-		"Menu Principal": "⌂",
-		"Sair da conta": "⇥",
-		"Voltar": "‹",
-		"Pedidos": "▣",
-		"Controle": "⚙",
-		"Usuários": "♙",
-		"Estoque": "▤",
-		"Gastos": "¤",
-		"Faturamento": "▥",
-		"Gestão": "◆",
-		"Adicionar": "+",
-		"Editar": "✎",
-		"Excluir": "−",
-		"Nova compra": "＋",
-		"Agrupar semelhantes": "≡",
-		"Salvar": "✓",
-		"Cancelar": "×",
-		"Atualizar": "↻",
-		"Remover": "−",
+		"Entrar": "\uf2f6", "Sair": "\uf00d", "Menu Principal": "\uf015",
+		"Sair da conta": "\uf2f5", "Voltar": "\uf053", "Pedidos": "\uf46d",
+		"Controle": "\uf013", "Usuários": "\uf0c0", "Estoque": "\uf468",
+		"Gastos": "\uf0d6", "Faturamento": "\uf080", "Gestão": "\uf009",
+		"Adicionar": "\uf067", "Editar": "\uf044", "Excluir": "\uf1f8",
+		"Nova compra": "\uf217", "Agrupar semelhantes": "\uf0c9", "Salvar": "\uf0c7",
+		"Cancelar": "\uf00d", "Atualizar": "\uf021", "Remover": "\uf068",
 	}
+	FALLBACK_ICONS = {
+		"Entrar": "➜", "Sair": "×", "Menu Principal": "⌂",
+		"Sair da conta": "⇥", "Voltar": "‹", "Pedidos": "▣",
+		"Controle": "⚙", "Usuários": "♙", "Estoque": "▤", "Gastos": "¤",
+		"Faturamento": "▥", "Gestão": "◆", "Adicionar": "+", "Editar": "✎",
+		"Excluir": "−", "Nova compra": "＋", "Agrupar semelhantes": "≡",
+		"Salvar": "✓", "Cancelar": "×", "Atualizar": "↻", "Remover": "−",
+	}
+
+	@staticmethod
+	def _font_awesome_path():
+		try:
+			package_root = Path(distribution("fontawesomefree").locate_file(""))
+		except PackageNotFoundError:
+			return None
+		fonts = list(package_root.rglob("fa-solid-900.ttf"))
+		return fonts[0] if fonts else None
+
+	def _font_awesome_image(self, glyph, color="white", size=22):
+		if not all((Image, ImageDraw, ImageFont, ImageTk)):
+			return None
+		font_path = self._font_awesome_path()
+		if font_path is None:
+			return None
+		font = ImageFont.truetype(str(font_path), size)
+		image = Image.new("RGBA", (size + 8, size + 8), (0, 0, 0, 0))
+		draw = ImageDraw.Draw(image)
+		draw.text((4, 1), glyph, font=font, fill=color, anchor="lt")
+		return ImageTk.PhotoImage(image)
 
 	def _style_button(self, button, tone="primary"):
 		colors = self.COLORS
 		label = button.cget("text")
-		icon = self.ICONS.get(label)
-		if icon:
-			button.configure(text=f"{icon}\n{label}")
+		glyph = self.ICONS.get(label)
+		if glyph:
+			try:
+				icon_image = self._font_awesome_image(glyph)
+				if icon_image:
+					button.configure(image=icon_image, compound=tk.LEFT, text=label)
+					button._font_awesome_image = icon_image
+				else:
+					button.configure(text=f"{self.FALLBACK_ICONS[label]}\n{label}")
+			except (OSError, RuntimeError):
+				button.configure(text=f"{self.FALLBACK_ICONS[label]}\n{label}")
+		elif label in self.FALLBACK_ICONS:
+			button.configure(text=f"{self.FALLBACK_ICONS[label]}\n{label}")
 		button.configure(
-			font=("Segoe UI Symbol", 10, "bold"),
+			font=("Segoe UI", 11, "bold"),
 			bg=colors["primary"],
 			fg="white",
 			activebackground=colors["primary_dark"],
 			activeforeground="white",
 			 relief=tk.FLAT,
 			borderwidth=0,
-			padx=12,
-			pady=5,
+			padx=16,
+			pady=8,
+			height=2,
 			cursor="hand2",
 		)
 
