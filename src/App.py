@@ -65,6 +65,7 @@ class App:
 	def _style_button(self, button, tone="primary"):
 		colors = self.COLORS
 		label = button.cget("text")
+		requested_width = button.cget("width")
 		glyph = self.ICONS.get(label)
 		if glyph:
 			try:
@@ -72,12 +73,19 @@ class App:
 				if icon_image:
 					button.configure(image=icon_image, compound=tk.LEFT, text=label)
 					button._font_awesome_image = icon_image
+					if requested_width:
+						button_font = tkfont.Font(font=("Segoe UI", 11, "bold"))
+						text_width = max(
+							button_font.measure(label),
+							button_font.measure("0") * requested_width,
+						)
+						button.configure(width=text_width + 22 + 32)
 				else:
-					button.configure(text=f"{self.FALLBACK_ICONS[label]}\n{label}")
+					button.configure(text=f"{self.FALLBACK_ICONS[label]}  {label}")
 			except (OSError, RuntimeError):
-				button.configure(text=f"{self.FALLBACK_ICONS[label]}\n{label}")
+				button.configure(text=f"{self.FALLBACK_ICONS[label]}  {label}")
 		elif label in self.FALLBACK_ICONS:
-			button.configure(text=f"{self.FALLBACK_ICONS[label]}\n{label}")
+			button.configure(text=f"{self.FALLBACK_ICONS[label]}  {label}")
 		button.configure(
 			font=("Segoe UI", 11, "bold"),
 			bg=colors["primary"],
@@ -88,7 +96,6 @@ class App:
 			borderwidth=0,
 			padx=16,
 			pady=8,
-			height=2,
 			cursor="hand2",
 		)
 
@@ -175,16 +182,6 @@ class App:
 		self._style_button(enter_btn, "primary")
 		enter_btn.grid(row=0, column=0, padx=8)
 
-		def on_exit():
-			if owns_root:
-				root.destroy()
-			else:
-				root.withdraw()
-
-		exit_btn = tk.Button(btn_frame, text="Sair", width=12, command=on_exit)
-		self._style_button(exit_btn, "danger")
-		exit_btn.grid(row=0, column=1, padx=8)
-
 		# Make the window non-resizable for a cleaner welcome screen
 		root.resizable(False, False)
 
@@ -257,15 +254,12 @@ class App:
 				win.attributes('-fullscreen', True)
 
 	def _add_navigation_buttons(self, parent, win, main_callback, logout_callback=None):
-		"""Add contextual main-menu and application-exit buttons to a screen."""
+		"""Add contextual main-menu and logout buttons to a screen."""
 		navigation = tk.Frame(parent)
 		navigation.pack(side=tk.BOTTOM, fill=tk.X, pady=(12, 0))
 		main_button = tk.Button(navigation, text='Menu Principal', command=main_callback)
 		self._style_button(main_button, "primary")
 		main_button.pack(side=tk.LEFT, padx=6)
-		exit_button = tk.Button(navigation, text='Sair', command=lambda: self._confirm_exit(win))
-		self._style_button(exit_button, "danger")
-		exit_button.pack(side=tk.RIGHT, padx=6)
 		if logout_callback:
 			logout_button = tk.Button(navigation, text='Sair da conta', command=logout_callback)
 			self._style_button(logout_button, "warning")
@@ -456,9 +450,6 @@ class App:
 			main_button = tk.Button(nav_add, text='Menu Principal', command=lambda: self._close_and_return(add_win, main_callback))
 			self._style_button(main_button)
 			main_button.pack(side=tk.LEFT, padx=6)
-			exit_button = tk.Button(nav_add, text='Sair', command=lambda: self._confirm_exit(add_win))
-			self._style_button(exit_button)
-			exit_button.pack(side=tk.LEFT, padx=6)
 
 		add_btn = tk.Button(ctrl_top, text='Adicionar', width=12, command=on_add)
 		self._style_button(add_btn)
@@ -644,9 +635,6 @@ class App:
 			main_update_button = tk.Button(nav_update, text='Menu Principal', command=lambda: self._close_and_return(upd_win, main_callback))
 			self._style_button(main_update_button)
 			main_update_button.pack(side=tk.LEFT, padx=6)
-			exit_update_button = tk.Button(nav_update, text='Sair', command=lambda: self._confirm_exit(upd_win))
-			self._style_button(exit_update_button)
-			exit_update_button.pack(side=tk.LEFT, padx=6)
 
 		btn_update = tk.Button(action_frame, text='Atualizar', width=16, command=do_update)
 		btn_remove = tk.Button(action_frame, text='Remover', width=16, command=do_remove)

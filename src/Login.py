@@ -102,10 +102,15 @@ class Login:
       btn_frame = ttk.Frame(frm)
       btn_frame.grid(row=2, column=0, columnspan=2, pady=(12, 0))
 
-      enter_btn = ttk.Button(btn_frame, text="Entrar", command=submit)
+      from App import App
+      app_style = App()
+
+      enter_btn = tk.Button(btn_frame, text="Entrar", command=submit)
+      app_style._style_button(enter_btn)
       enter_btn.pack(side=tk.LEFT, padx=6)
 
-      cancel_btn = ttk.Button(btn_frame, text="Cancelar", command=cancel)
+      cancel_btn = tk.Button(btn_frame, text="Cancelar", command=cancel)
+      app_style._style_button(cancel_btn)
       cancel_btn.pack(side=tk.LEFT, padx=6)
 
       # Focus
