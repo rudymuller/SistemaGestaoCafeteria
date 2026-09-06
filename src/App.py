@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk, font as tkfont
 from importlib.metadata import PackageNotFoundError, distribution
 from pathlib import Path
+import sys
 from const import WIN_WIDTH, WIN_HEIGHT
 
 try:
@@ -43,6 +44,10 @@ class App:
 
 	@staticmethod
 	def _font_awesome_path():
+		if getattr(sys, "_MEIPASS", None):
+			bundled_fonts = list(Path(sys._MEIPASS).rglob("fa-solid-900.ttf"))
+			if bundled_fonts:
+				return bundled_fonts[0]
 		try:
 			package_root = Path(distribution("fontawesomefree").locate_file(""))
 		except PackageNotFoundError:
