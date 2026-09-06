@@ -275,10 +275,14 @@ class App:
 		def render_stock():
 			self._open_estoque_menu(login_instance, win, content)
 
+		def render_orders():
+			from Pedidos import Pedidos
+			Pedidos(is_admin=is_admin).abrir_menu(self, login_instance, win, content)
+
 		items = [("Home", render_main)]
 		if is_admin:
 			items.extend([
-				("Pedidos", lambda: self._open_placeholder("Pedidos")),
+				("Pedidos", render_orders),
 				("Usuários", render_users),
 				("Estoque", render_stock),
 				("Gastos", lambda: self._open_placeholder("Gastos")),
@@ -287,7 +291,7 @@ class App:
 			])
 		else:
 			items.extend([
-				("Pedidos", lambda: self._open_placeholder("Pedidos")),
+				("Pedidos", render_orders),
 				("Estoque", render_stock),
 			])
 
