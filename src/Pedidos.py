@@ -5,6 +5,7 @@ from tkinter import messagebox, ttk
 import uuid
 
 from DBProxy import DBProxy
+from Lanche import Lanche
 
 class EstadoPedido(Enum):
     ABERTO = "Aberto"
@@ -52,6 +53,7 @@ class Pedido:
             self._ensure_tables()
 
         def _ensure_tables(self):
+            Lanche(db_path=self.db.db_path).close()
             self.db.execute(
                 """
                 CREATE TABLE IF NOT EXISTS pedidos (
@@ -168,10 +170,38 @@ class Pedido:
                     raise ValueError(f"estoque insuficiente para '{nome}'")
             return alocados
 
+        def _expandir_lanches(self, itens):
+            expandidos = []
+            for item in itens:
+                if not isinstance(item, dict) or "lanche_id" not in item:
+                    expandidos.append(item)
+                    continue
+                quantidade = float(item.get("quantidade", 0))
+                if quantidade <= 0:
+                    raise ValueError("a quantidade do lanche deve ser maior que zero")
+                lanche = self.db.query_one(
+                    "SELECT id, nome FROM lanches WHERE id = ? AND ativo = 1",
+                    (item["lanche_id"],),
+                )
+                if not lanche:
+                    raise ValueError("lanche não encontrado")
+                componentes = self.db.query_all(
+                    "SELECT item_nome, quantidade FROM lanche_itens WHERE lanche_id = ?",
+                    (lanche["id"],),
+                )
+                if not componentes:
+                    raise ValueError(f"o lanche '{lanche['nome']}' não possui receita")
+                for componente in componentes:
+                    expandidos.append({
+                        "nome": componente["item_nome"],
+                        "quantidade": float(componente["quantidade"]) * quantidade,
+                    })
+            return expandidos
+
         def adicionar(self, cliente, itens):
             if not cliente or not itens:
                 raise ValueError("cliente e itens são obrigatórios")
-            alocados = self._alocar_itens(itens)
+            alocados = self._alocar_itens(self._expandir_lanches(itens))
             pedido_id = self._novo_pedido_id()
             now = datetime.utcnow().isoformat()
             with self.db.transaction():
@@ -257,7 +287,7 @@ class Pedido:
             pedido = self.obter(pedido_id)
             if not pedido or self._estado(pedido["estado"]) not in (EstadoPedido.ABERTO, EstadoPedido.EM_PRODUCAO, EstadoPedido.EM_CONSUMO):
                 raise ValueError("só é possível editar pedidos em produção ou em consumo")
-            alocados = self._alocar_itens(itens)
+            alocados = self._alocar_itens(self._expandir_lanches(itens))
             with self.db.transaction():
                 if self._estado(pedido["estado"]) == EstadoPedido.EM_CONSUMO:
                     for lote, quantidade in alocados:
@@ -411,6 +441,7 @@ class Pedido:
                 if pedido:
                     cliente.insert(0, pedido["cliente"])
                 selected_items = {}
+                selected_lanches = {}
                 existing_items = self.listar_itens(pedido["id"]) if pedido else []
                 original_item_ids = {item["id"] for item in existing_items}
                 tk.Label(body, text="Categorias:", **label_style).grid(row=1, column=0, sticky=tk.W, pady=(12, 6))
@@ -425,6 +456,9 @@ class Pedido:
                 tk.Label(quantity_frame, text="Quantidade:", **label_style).pack(side=tk.LEFT)
                 quantity_entry = tk.Entry(quantity_frame, width=10, **entry_style)
                 quantity_entry.pack(side=tk.LEFT, padx=6)
+                lanche_options = {}
+                lanche_choice = ttk.Combobox(quantity_frame, state="readonly", width=24)
+                lanche_choice.pack(side=tk.LEFT, padx=(12, 6))
                 selected_label = "Itens a acrescentar:" if pedido else "Itens selecionados:"
                 tk.Label(body, text=selected_label, **label_style).grid(row=4, column=0, sticky=tk.W, pady=(12, 6))
                 selected_list = tk.Listbox(body, height=5, width=58, **list_style)
@@ -436,11 +470,18 @@ class Pedido:
                         selected_list.insert(tk.END, f"Atual: {item['nome']} = {item['quantidade']:g}")
                     for name, quantity in selected_items.items():
                         selected_list.insert(tk.END, f"Novo: {name} = {quantity:g}")
+                    for name, quantity in selected_lanches.values():
+                        selected_list.insert(tk.END, f"Lanche: {name} = {quantity:g}")
 
                 categories = [row["categoria"] or "Sem categoria" for row in self.db.query_all(
                     "SELECT DISTINCT categoria FROM estoque WHERE ativo = 1 ORDER BY categoria"
                 )]
                 category_list.insert(tk.END, *categories)
+                for row in self.db.query_all(
+                    "SELECT id, nome FROM lanches WHERE ativo = 1 ORDER BY nome"
+                ):
+                    lanche_options[row["nome"]] = row["id"]
+                lanche_choice["values"] = tuple(lanche_options)
 
                 def load_items(_event=None):
                     selection = category_list.curselection()
@@ -474,10 +515,29 @@ class Pedido:
                     except (TypeError, ValueError) as error:
                         messagebox.showerror("Itens do pedido", str(error), parent=form)
 
+                def add_selected_lanche():
+                    try:
+                        name = lanche_choice.get().strip()
+                        if not name:
+                            raise ValueError("selecione um lanche")
+                        quantity = float(quantity_entry.get().strip())
+                        if quantity <= 0:
+                            raise ValueError("a quantidade deve ser maior que zero")
+                        lanche_id = lanche_options[name]
+                        current = selected_lanches.get(lanche_id, (name, 0))[1]
+                        selected_lanches[lanche_id] = (name, current + quantity)
+                        render_selected_items()
+                        quantity_entry.delete(0, tk.END)
+                    except (KeyError, TypeError, ValueError) as error:
+                        messagebox.showerror("Lanches do pedido", str(error), parent=form)
+
                 category_list.bind("<<ListboxSelect>>", load_items)
                 add_item_button = tk.Button(quantity_frame, text="Adicionar item", command=add_selected_item)
                 app._style_button(add_item_button, "primary")
                 add_item_button.pack(side=tk.LEFT)
+                add_lanche_button = tk.Button(quantity_frame, text="Adicionar lanche", command=add_selected_lanche)
+                app._style_button(add_lanche_button, "success")
+                add_lanche_button.pack(side=tk.LEFT, padx=(6, 0))
                 render_selected_items()
 
                 def remove_selected_item():
@@ -488,9 +548,12 @@ class Pedido:
                     selected_index = selection[0]
                     if selected_index < len(existing_items):
                         existing_items.pop(selected_index)
-                    else:
+                    elif selected_index < len(existing_items) + len(selected_items):
                         new_items = list(selected_items)
                         selected_items.pop(new_items[selected_index - len(existing_items)])
+                    else:
+                        lanche_items = list(selected_lanches)
+                        selected_lanches.pop(lanche_items[selected_index - len(existing_items) - len(selected_items)])
                     render_selected_items()
 
                 remove_item_button = tk.Button(body, text="Excluir item selecionado", command=remove_selected_item)
@@ -506,7 +569,12 @@ class Pedido:
                 estado.set(self._estado(pedido["estado"]).value if pedido else EstadoPedido.ABERTO.value)
 
                 def parse_items():
-                    return [{"nome": name, "quantidade": quantity} for name, quantity in selected_items.items()]
+                    items = [{"nome": name, "quantidade": quantity} for name, quantity in selected_items.items()]
+                    items.extend(
+                        {"lanche_id": lanche_id, "quantidade": quantity}
+                        for lanche_id, (_name, quantity) in selected_lanches.items()
+                    )
+                    return items
 
                 def save():
                     try:

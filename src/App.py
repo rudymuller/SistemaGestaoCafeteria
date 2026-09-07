@@ -27,7 +27,7 @@ class App:
 	ICONS = {
 		"Entrar": "\uf2f6", "Sair": "\uf00d", "Menu Principal": "\uf015", "Home": "\uf015",
 		"Sair da conta": "\uf2f5", "Voltar": "\uf053", "Pedidos": "\uf46d",
-		"Usuários": "\uf0c0", "Estoque": "\uf468",
+		"Usuários": "\uf0c0", "Estoque": "\uf468", "Lanches": "\uf2e7",
 		"Gastos": "\uf0d6", "Faturamento": "\uf080", "Gestão": "\uf009",
 		"Adicionar": "\uf067", "Editar": "\uf044", "Excluir": "\uf1f8",
 		"Nova compra": "\uf217", "Agrupar semelhantes": "\uf0c9", "Salvar": "\uf0c7",
@@ -36,7 +36,7 @@ class App:
 	FALLBACK_ICONS = {
 		"Entrar": "➜", "Sair": "×", "Menu Principal": "⌂", "Home": "⌂",
 		"Sair da conta": "⇥", "Voltar": "‹", "Pedidos": "▣",
-		"Usuários": "♙", "Estoque": "▤", "Gastos": "¤",
+		"Usuários": "♙", "Estoque": "▤", "Lanches": "♨", "Gastos": "¤",
 		"Faturamento": "▥", "Gestão": "◆", "Adicionar": "+", "Editar": "✎",
 		"Excluir": "−", "Nova compra": "＋", "Agrupar semelhantes": "≡",
 		"Salvar": "✓", "Cancelar": "×", "Atualizar": "↻", "Remover": "−",
@@ -279,10 +279,15 @@ class App:
 			from Pedidos import Pedidos
 			Pedidos(is_admin=is_admin).abrir_menu(self, login_instance, win, content)
 
+		def render_lanches():
+			from Lanche import Lanche
+			Lanche().abrir_menu(self, login_instance, win, content)
+
 		items = [("Home", render_main)]
 		if is_admin:
 			items.extend([
 				("Pedidos", render_orders),
+				("Lanches", render_lanches),
 				("Usuários", render_users),
 				("Estoque", render_stock),
 				("Gastos", lambda: self._open_placeholder("Gastos")),
@@ -292,6 +297,7 @@ class App:
 		else:
 			items.extend([
 				("Pedidos", render_orders),
+				("Lanches", render_lanches),
 				("Estoque", render_stock),
 			])
 
